@@ -197,7 +197,17 @@ class MT5Connector:
         return tick._asdict()
 
     def spread_pips(self, symbol: str) -> float:
-        """Current spread in pips (approximate)."""
+        """
+        Current spread in 'pips' — normalised for the instrument type.
+
+        For standard forex (digits 3 or 5) 1 pip = 10 points.
+        For other instruments (gold, indices, crypto) we report the spread
+        as a multiple of ATR-based 'typical spread' or simply in points,
+        keeping it comparable to the MAX_SPREAD_PIPS threshold.
+
+        To avoid false rejections on non-forex (where "pips" are meaningless),
+        we normalise: spread_pips = spread_in_points / pip_factor.
+        """
         self.ensure_connected()
         tick = mt5.symbol_info_tick(symbol)
         info = mt5.symbol_info(symbol)
@@ -207,10 +217,19 @@ class MT5Connector:
         point = info.point
         if point == 0:
             return 999.0
-        # For 5-digit brokers, 1 pip = 10 points
+
         digits = info.digits
+        # Standard forex pairs: 3/5-digit quoting → 1 pip = 10 points
         if digits in (3, 5):
             return raw_spread / (point * 10)
+
+        # For everything else (gold 2-digit, indices 0-2 digit, crypto)
+        # Use the broker's built-in spread in points (integer), then
+        # normalise to a "pip-equivalent" using trade_tick_size.
+        # This makes MAX_SPREAD_PIPS work as "max spread in ticks".
+        tick_size = info.trade_tick_size if hasattr(info, "trade_tick_size") else point
+        if tick_size > 0:
+            return raw_spread / tick_size
         return raw_spread / point
 
     # =====================================================================

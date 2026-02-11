@@ -109,6 +109,16 @@ class WolfEngine:
             f"Trading Capital: ${cfg.TRADING_CAPITAL:,.2f}"
         )
 
+        # Snapshot starting balance for risk manager (stable base for limits)
+        starting_balance = acc.get("balance", cfg.TRADING_CAPITAL)
+        if self.risk_mgr._day_start_balance <= 0:
+            self.risk_mgr._day_start_balance = starting_balance
+        if self.risk_mgr._week_start_balance <= 0:
+            self.risk_mgr._week_start_balance = starting_balance
+        # Update peak equity from live equity at startup
+        equity = acc.get("equity", starting_balance)
+        self.risk_mgr.update_peak_equity(equity)
+
         mode = "SCAN ONLY" if self.scan_only else "LIVE TRADING"
         log.info(f"Mode: {mode}")
         log.info(f"Risk per trade: {cfg.MAX_RISK_PER_TRADE_PCT}%")
@@ -159,6 +169,9 @@ class WolfEngine:
                 prev_tickets = self.pos_monitor.get_open_tickets()
                 self.pos_monitor.check_all_positions()
                 self.pos_monitor.handle_closed_positions(prev_tickets)
+
+                # ── Weekend gap protection ────────────────────────────────
+                self.pos_monitor.check_weekend_protection()
 
                 # ── Periodic risk check (drawdown, peak balance) ─────────
                 self.risk_mgr.periodic_risk_check()

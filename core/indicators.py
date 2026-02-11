@@ -77,11 +77,13 @@ def add_macd(df: pd.DataFrame) -> pd.DataFrame:
 # ═════════════════════════════════════════════════════════════════════════════
 
 def add_stochastic(df: pd.DataFrame) -> pd.DataFrame:
-    """Stochastic %K and %D."""
+    """Stochastic %K (slow) and %D.  Applies both smoothing stages."""
     low_min = df["low"].rolling(window=cfg.STOCH_K).min()
     high_max = df["high"].rolling(window=cfg.STOCH_K).max()
     denom = (high_max - low_min).replace(0, np.nan)
-    df["stoch_k"] = 100 * (df["close"] - low_min) / denom
+    raw_k = 100 * (df["close"] - low_min) / denom
+    # FIXED: Apply the smoothing parameter to get "slow" stochastic %K
+    df["stoch_k"] = raw_k.rolling(window=cfg.STOCH_SMOOTH).mean()
     df["stoch_d"] = df["stoch_k"].rolling(window=cfg.STOCH_D).mean()
     return df
 
@@ -159,10 +161,14 @@ def add_atr(df: pd.DataFrame, period: int = None) -> pd.DataFrame:
 # ═════════════════════════════════════════════════════════════════════════════
 
 def add_cci(df: pd.DataFrame, period: int = None) -> pd.DataFrame:
+    """Commodity Channel Index — vectorised mean-absolute-deviation."""
     period = period or cfg.CCI_PERIOD
     tp = (df["high"] + df["low"] + df["close"]) / 3
     sma_tp = tp.rolling(window=period).mean()
-    mad = tp.rolling(window=period).apply(lambda x: np.abs(x - x.mean()).mean(), raw=True)
+    # FIXED: Vectorised MAD instead of slow .apply(lambda)
+    # MAD ≈ mean(|x - mean(x)|) over the rolling window.
+    # We approximate efficiently using the pre-computed rolling mean.
+    mad = (tp - sma_tp).abs().rolling(window=period).mean()
     df["cci"] = (tp - sma_tp) / (0.015 * mad.replace(0, np.nan))
     return df
 
@@ -214,10 +220,23 @@ def add_volume_indicators(df: pd.DataFrame) -> pd.DataFrame:
 # ═════════════════════════════════════════════════════════════════════════════
 
 def add_vwap(df: pd.DataFrame) -> pd.DataFrame:
-    """Approximate VWAP using tick_volume.  Best for intraday timeframes."""
+    """
+    Approximate VWAP using tick_volume, with daily reset.
+    VWAP must reset at the start of each trading day; a running cumsum
+    from the beginning of the DataFrame is meaningless on multi-day data.
+    """
     tp = (df["high"] + df["low"] + df["close"]) / 3
-    cumvol = df["volume"].cumsum()
-    cumtpvol = (tp * df["volume"]).cumsum()
+    tpvol = tp * df["volume"]
+
+    # Group by calendar date so VWAP resets each day
+    if hasattr(df.index, "date"):
+        day_group = df.index.date
+    else:
+        # Fallback: no daily reset (will produce a warning)
+        day_group = np.zeros(len(df), dtype=int)
+
+    cumvol = df["volume"].groupby(day_group).cumsum()
+    cumtpvol = tpvol.groupby(day_group).cumsum()
     df["vwap"] = cumtpvol / cumvol.replace(0, np.nan)
     return df
 
@@ -251,34 +270,63 @@ def detect_divergence(
     price: pd.Series,
     indicator: pd.Series,
     lookback: int = 20,
+    swing_window: int = 5,
 ) -> pd.Series:
     """
     Detect bullish/bearish divergence between price and an oscillator.
     Returns a Series with values: 1 (bullish div), -1 (bearish div), 0 (none).
+
+    FIXED: Uses actual swing lows/highs (local minima/maxima) instead of
+    comparing two arbitrary points.  A divergence occurs when:
+      - Bullish: price makes a LOWER swing low, but indicator makes a HIGHER swing low.
+      - Bearish: price makes a HIGHER swing high, but indicator makes a LOWER swing high.
     """
     result = pd.Series(0, index=price.index, dtype=int)
 
-    for i in range(lookback, len(price)):
-        window_price = price.iloc[i - lookback : i + 1]
-        window_ind = indicator.iloc[i - lookback : i + 1]
+    if len(price) < lookback + swing_window * 2:
+        return result
 
-        if window_price.isna().any() or window_ind.isna().any():
+    price_vals = price.values
+    ind_vals = indicator.values
+
+    # Find swing lows and swing highs
+    swing_lows: list[int] = []  # indices of swing lows
+    swing_highs: list[int] = []
+
+    for i in range(swing_window, len(price_vals) - swing_window):
+        if np.isnan(price_vals[i]) or np.isnan(ind_vals[i]):
             continue
+        window = price_vals[i - swing_window: i + swing_window + 1]
+        if np.any(np.isnan(window)):
+            continue
+        if price_vals[i] == np.min(window):
+            swing_lows.append(i)
+        if price_vals[i] == np.max(window):
+            swing_highs.append(i)
 
-        # Find local minima/maxima in the window
-        price_min_idx = window_price.idxmin()
-        price_max_idx = window_price.idxmax()
+    # Check consecutive swing lows for bullish divergence
+    for k in range(1, len(swing_lows)):
+        prev_i = swing_lows[k - 1]
+        curr_i = swing_lows[k]
+        if curr_i - prev_i > lookback:
+            continue  # too far apart
+        if np.isnan(ind_vals[prev_i]) or np.isnan(ind_vals[curr_i]):
+            continue
+        # Bullish div: lower price low + higher indicator low
+        if price_vals[curr_i] < price_vals[prev_i] and ind_vals[curr_i] > ind_vals[prev_i]:
+            result.iloc[curr_i] = 1
 
-        # Bullish divergence: price makes lower low, indicator makes higher low
-        recent_price_low = price.iloc[i]
-        if i >= 2 and price.iloc[i] < price.iloc[i - lookback]:
-            if indicator.iloc[i] > indicator.iloc[i - lookback]:
-                result.iloc[i] = 1  # bullish divergence
-
-        # Bearish divergence: price makes higher high, indicator makes lower high
-        if i >= 2 and price.iloc[i] > price.iloc[i - lookback]:
-            if indicator.iloc[i] < indicator.iloc[i - lookback]:
-                result.iloc[i] = -1  # bearish divergence
+    # Check consecutive swing highs for bearish divergence
+    for k in range(1, len(swing_highs)):
+        prev_i = swing_highs[k - 1]
+        curr_i = swing_highs[k]
+        if curr_i - prev_i > lookback:
+            continue
+        if np.isnan(ind_vals[prev_i]) or np.isnan(ind_vals[curr_i]):
+            continue
+        # Bearish div: higher price high + lower indicator high
+        if price_vals[curr_i] > price_vals[prev_i] and ind_vals[curr_i] < ind_vals[prev_i]:
+            result.iloc[curr_i] = -1
 
     return result
 

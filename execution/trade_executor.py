@@ -96,6 +96,44 @@ class TradeExecutor:
         sl = round(signal.stop_loss, digits)
         tp = round(signal.take_profit, digits)
 
+        # ── PRE-EXECUTION SANITY CHECK (production safety) ──────────────
+        # Verify the ACTUAL dollar risk at execution price doesn't exceed
+        # hard cap.  This is the last line of defence.
+        actual_sl_distance = abs(price - sl)
+        if actual_sl_distance <= 0:
+            log.error(f"{symbol}: SL distance is 0 at execution price — abort")
+            return None
+
+        # Check that SL/TP are still on the correct side after price moved
+        if signal.direction == "BUY" and sl >= price:
+            log.error(f"{symbol}: BUY SL ({sl}) >= live ask ({price}) — stale signal, abort")
+            return None
+        if signal.direction == "SELL" and sl <= price:
+            log.error(f"{symbol}: SELL SL ({sl}) <= live bid ({price}) — stale signal, abort")
+            return None
+
+        # Hard cap: never risk more than MAX_RISK_PER_TRADE_PCT_CAP of equity
+        equity = self.mt5.account_equity()
+        if equity > 0:
+            action_type = mt5.ORDER_TYPE_BUY if signal.direction == "BUY" else mt5.ORDER_TYPE_SELL
+            potential_loss = self.mt5.calc_profit(
+                action_type, symbol, lots, price,
+                price - actual_sl_distance if signal.direction == "BUY" else price + actual_sl_distance
+            )
+            if potential_loss is not None:
+                max_allowed_loss = equity * (cfg.MAX_RISK_PER_TRADE_PCT_CAP / 100)
+                if abs(potential_loss) > max_allowed_loss:
+                    log.warning(
+                        f"{symbol}: potential loss ${abs(potential_loss):.2f} exceeds "
+                        f"hard cap ${max_allowed_loss:.2f} — reducing lots"
+                    )
+                    if abs(potential_loss) > 0:
+                        scale = max_allowed_loss / abs(potential_loss)
+                        vol_step = sym_info.get("volume_step", 0.01)
+                        vol_min = sym_info.get("volume_min", 0.01)
+                        lots = max(vol_min, int(lots * scale / vol_step) * vol_step)
+                        lots = round(lots, 8)
+
         # Determine filling mode using BITMASK flags (not ORDER_FILLING enums)
         filling_modes = sym_info.get("filling_mode", 0)
         if filling_modes & _SYMBOL_FILL_FOK:

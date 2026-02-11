@@ -85,7 +85,9 @@ def analyze_timeframe(
     tfa = TimeframeAnalysis(symbol=symbol, timeframe=timeframe)
 
     df = mt5.get_rates(symbol, timeframe)
-    if df is None or len(df) < 50:
+    # FIXED: require enough bars for the slowest indicator (200-period EMA)
+    min_bars = max(cfg.EMA_TREND + 50, cfg.ICHI_SENKOU_B + cfg.ICHI_KIJUN + 10, 100)
+    if df is None or len(df) < min_bars:
         return tfa
 
     # Compute all indicators
@@ -342,14 +344,15 @@ def compute_confluence_score(sa: SymbolAnalysis) -> float:
             ind_total += 1
             ind_agree += 1  # trending market is good for directional trades
 
-        # Stochastic
+        # Stochastic — FIXED: "not overbought" is too weak for a BUY signal.
+        # Require Stoch to be in the favourable half, not just "not extreme".
         stoch = ind.get("stoch_k")
         if stoch is not None and not np.isnan(stoch):
             ind_total += 1
-            if direction_val == 1 and stoch < cfg.STOCH_OVERBOUGHT:
-                ind_agree += 1
-            elif direction_val == -1 and stoch > cfg.STOCH_OVERSOLD:
-                ind_agree += 1
+            if direction_val == 1 and 20 < stoch < 70:
+                ind_agree += 1  # BUY: Stoch rising from low-mid zone
+            elif direction_val == -1 and 30 < stoch < 80:
+                ind_agree += 1  # SELL: Stoch falling from mid-high zone
 
         # Divergence bonus
         rsi_div = ind.get("rsi_divergence", 0)
@@ -405,13 +408,18 @@ def compute_confluence_score(sa: SymbolAnalysis) -> float:
     score += min(pa_score, pa_budget)  # hard cap at budget
 
     # ── 5. Volume Confirmation (0-10) ───────────────────────────────────
+    # FIXED: Tightened thresholds.  1.2x average volume is barely
+    # above noise.  Require 1.5x for full credit; 1.0x for partial.
     if h1 and h1.indicators:
         vol_ratio = h1.indicators.get("vol_ratio")
         if vol_ratio is not None and not np.isnan(vol_ratio):
-            if vol_ratio > 1.2:
+            if vol_ratio > 1.5:
                 score += weights["volume_confirmation"]
-            elif vol_ratio > 0.8:
+            elif vol_ratio > 1.0:
                 score += weights["volume_confirmation"] * 0.5
+            # Below-average volume → slight penalty (reduces score by up to 3)
+            elif vol_ratio < 0.5:
+                score -= min(3.0, weights["volume_confirmation"] * 0.3)
 
     # ── 6. Smart Money Pattern (0-10) ───────────────────────────────────
     sm_score = 0
@@ -444,5 +452,19 @@ def compute_confluence_score(sa: SymbolAnalysis) -> float:
     elif sa.spread_pips <= cfg.MAX_SPREAD_PIPS:
         score += weights["spread_quality"] * 0.4
 
-    sa.confluence_score = round(min(score, 100.0), 2)
+    # ── 9. Spread-as-percent-of-risk penalty (NEW) ─────────────────────
+    # If spread is a large fraction of the stop-loss distance,
+    # the trade has terrible edge after costs.  Penalize heavily.
+    if sa.atr > 0 and sa.entry_price > 0 and sa.stop_loss > 0:
+        risk_distance = abs(sa.entry_price - sa.stop_loss)
+        if risk_distance > 0:
+            sym_info_point = 0.0001  # default for forex
+            # Rough spread in price terms: spread_pips * pip_size
+            spread_price = sa.spread_pips * sym_info_point
+            spread_pct_of_risk = spread_price / risk_distance
+            if spread_pct_of_risk > 0.15:  # spread > 15% of risk = bad
+                penalty = min(10.0, spread_pct_of_risk * 30)
+                score -= penalty
+
+    sa.confluence_score = round(max(min(score, 100.0), 0.0), 2)
     return sa.confluence_score
