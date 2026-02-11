@@ -132,7 +132,7 @@ def detect_piercing_dark_cloud(prev, curr) -> int:
     return 0
 
 
-def detect_tweezer(prev, curr, tolerance: float = 0.001) -> int:
+def detect_tweezer(prev, curr, tolerance: float = 0.05) -> int:
     """
     Tweezer Tops/Bottoms: two candles with nearly identical highs/lows.
     """

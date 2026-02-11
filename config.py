@@ -36,7 +36,7 @@ TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
 #  OPENAI
 # ═════════════════════════════════════════════════════════════════════════════
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL: str = "gpt-4o"
+OPENAI_MODEL: str = "gpt-5.2-2025-12-11"
 
 # ═════════════════════════════════════════════════════════════════════════════
 #  CAPITAL & ACCOUNT

@@ -5,16 +5,19 @@
   Enforces every risk rule.  No exceptions.  No overrides.
   - Daily loss limit
   - Weekly loss limit
-  - Max drawdown protection
+  - Max drawdown protection (uses EQUITY, not balance)
   - Max concurrent positions
   - Correlation limits
   - Per-trade risk caps
+  - Persists state to disk so limits survive restarts
 ===============================================================================
 """
 
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
@@ -24,6 +27,9 @@ from core.mt5_connector import MT5Connector
 from utils.logger import get_logger
 
 log = get_logger("risk_mgr")
+
+# Path for persisted risk state (survives restarts)
+_RISK_STATE_PATH = cfg.BASE_DIR / "data" / "risk_state.json"
 
 
 class RiskManager:
@@ -41,20 +47,112 @@ class RiskManager:
         self._week_start: datetime = self._day_start - timedelta(
             days=self._day_start.weekday()
         )
-        self._peak_balance: float = cfg.TRADING_CAPITAL
+        # FIXED: initialise peak from EQUITY (includes floating PnL)
+        self._peak_equity: float = cfg.TRADING_CAPITAL
+        # Snapshot of balance at start of day — used as stable base for limits
+        self._day_start_balance: float = cfg.TRADING_CAPITAL
+        self._week_start_balance: float = cfg.TRADING_CAPITAL
         self._halted: bool = False
         self._halt_reason: str = ""
 
         self._journal_path = cfg.TRADE_JOURNAL_PATH
         self._journal_path.parent.mkdir(parents=True, exist_ok=True)
+        _RISK_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+        # Restore state from disk (survives restart)
+        self._restore_state()
+
+    # =====================================================================
+    #  STATE PERSISTENCE (survives restarts)
+    # =====================================================================
+
+    def _persist_state(self):
+        """Atomically write risk state to disk."""
+        state = {
+            "daily_pnl": self._daily_pnl,
+            "weekly_pnl": self._weekly_pnl,
+            "trades_today": self._trades_today,
+            "wins_today": self._wins_today,
+            "day_start": self._day_start.isoformat(),
+            "week_start": self._week_start.isoformat(),
+            "peak_equity": self._peak_equity,
+            "day_start_balance": self._day_start_balance,
+            "week_start_balance": self._week_start_balance,
+            "halted": self._halted,
+            "halt_reason": self._halt_reason,
+            "saved_at": datetime.now(timezone.utc).isoformat(),
+        }
+        try:
+            # Atomic write: write to temp file then rename
+            fd, tmp_path = tempfile.mkstemp(
+                dir=_RISK_STATE_PATH.parent, suffix=".tmp"
+            )
+            with os.fdopen(fd, "w") as f:
+                json.dump(state, f, indent=2)
+            # On Windows, need to remove target first
+            if _RISK_STATE_PATH.exists():
+                _RISK_STATE_PATH.unlink()
+            Path(tmp_path).rename(_RISK_STATE_PATH)
+        except Exception as e:
+            log.warning(f"Failed to persist risk state: {e}")
+
+    def _restore_state(self):
+        """Restore risk state from disk if it's from the same day/week."""
+        if not _RISK_STATE_PATH.exists():
+            return
+        try:
+            with open(_RISK_STATE_PATH, "r") as f:
+                state = json.load(f)
+
+            saved_day_start = datetime.fromisoformat(state["day_start"])
+            now = datetime.now(timezone.utc)
+            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+            # Only restore daily state if it's from today
+            if saved_day_start.date() == today_start.date():
+                self._daily_pnl = state.get("daily_pnl", 0.0)
+                self._trades_today = state.get("trades_today", 0)
+                self._wins_today = state.get("wins_today", 0)
+                self._day_start_balance = state.get(
+                    "day_start_balance", cfg.TRADING_CAPITAL
+                )
+                log.info(
+                    f"Restored daily risk state: PnL=${self._daily_pnl:.2f}, "
+                    f"trades={self._trades_today}"
+                )
+            else:
+                log.info("Saved risk state is from a previous day — starting fresh")
+
+            # Restore weekly state if same week
+            saved_week_start = datetime.fromisoformat(state["week_start"])
+            current_week_start = today_start - timedelta(days=today_start.weekday())
+            if saved_week_start.date() >= current_week_start.date():
+                self._weekly_pnl = state.get("weekly_pnl", 0.0)
+                self._week_start_balance = state.get(
+                    "week_start_balance", cfg.TRADING_CAPITAL
+                )
+
+            # Always restore peak and halt state
+            self._peak_equity = state.get("peak_equity", cfg.TRADING_CAPITAL)
+            self._halted = state.get("halted", False)
+            self._halt_reason = state.get("halt_reason", "")
+
+            if self._halted:
+                log.warning(
+                    f"Restored HALTED state: {self._halt_reason} — "
+                    "trading will NOT resume automatically"
+                )
+
+        except Exception as e:
+            log.warning(f"Failed to restore risk state: {e}")
 
     # =====================================================================
     #  STATE MANAGEMENT
     # =====================================================================
 
-    def update_peak_balance(self, current_balance: float):
-        if current_balance > self._peak_balance:
-            self._peak_balance = current_balance
+    def update_peak_equity(self, current_equity: float):
+        if current_equity > self._peak_equity:
+            self._peak_equity = current_equity
 
     def record_trade_result(self, pnl: float, won: bool):
         """Called after every trade close."""
@@ -69,6 +167,9 @@ class RiskManager:
         self._check_weekly_limit()
         self._check_drawdown()
 
+        # Persist state so limits survive restarts
+        self._persist_state()
+
     def reset_daily(self):
         """Called at start of new trading day."""
         self._daily_pnl = 0.0
@@ -77,11 +178,16 @@ class RiskManager:
         self._day_start = datetime.now(timezone.utc).replace(
             hour=0, minute=0, second=0, microsecond=0
         )
+        # Snapshot today's starting balance for stable limit calculation
+        balance = self.mt5.account_balance()
+        if balance > 0:
+            self._day_start_balance = balance
         # Don't reset halt if it's a drawdown halt
         if self._halt_reason == "daily_loss_limit":
             self._halted = False
             self._halt_reason = ""
             log.info("Daily loss limit reset — trading resumed")
+        self._persist_state()
 
     def reset_weekly(self):
         """Called at start of new trading week."""
@@ -89,29 +195,35 @@ class RiskManager:
         self._week_start = datetime.now(timezone.utc).replace(
             hour=0, minute=0, second=0, microsecond=0
         )
+        balance = self.mt5.account_balance()
+        if balance > 0:
+            self._week_start_balance = balance
         if self._halt_reason == "weekly_loss_limit":
             self._halted = False
             self._halt_reason = ""
             log.info("Weekly loss limit reset — trading resumed")
+        self._persist_state()
 
     # =====================================================================
     #  RISK CHECKS
     # =====================================================================
 
     def _check_daily_limit(self):
-        # Use live equity (or peak balance) for dynamic limit — protects shrinking accounts
-        capital_base = max(self.mt5.account_balance(), 1.0)
+        # FIXED: Use day-start balance (stable), not live balance (shrinking)
+        capital_base = max(self._day_start_balance, 1.0)
         daily_limit = capital_base * (cfg.DAILY_LOSS_LIMIT_PCT / 100)
         if self._daily_pnl < -daily_limit:
             self._halted = True
             self._halt_reason = "daily_loss_limit"
             log.warning(
                 f"DAILY LOSS LIMIT HIT: ${self._daily_pnl:.2f} "
-                f"(limit: -${daily_limit:.2f}) — HALTING"
+                f"(limit: -${daily_limit:.2f} of day-start ${capital_base:.2f}) "
+                f"— HALTING"
             )
 
     def _check_weekly_limit(self):
-        capital_base = max(self.mt5.account_balance(), 1.0)
+        # FIXED: Use week-start balance (stable)
+        capital_base = max(self._week_start_balance, 1.0)
         weekly_limit = capital_base * (cfg.WEEKLY_LOSS_LIMIT_PCT / 100)
         if self._weekly_pnl < -weekly_limit:
             self._halted = True
@@ -122,22 +234,28 @@ class RiskManager:
             )
 
     def _check_drawdown(self):
-        current_balance = self.mt5.account_balance()
+        # FIXED: Use EQUITY (includes floating PnL), not balance
+        current_equity = self.mt5.account_equity()
         # Guard: if MT5 returns 0 (disconnected), skip the check entirely
-        if current_balance <= 0:
-            log.warning("account_balance() returned 0 — skipping drawdown check (possible disconnect)")
+        if current_equity <= 0:
+            log.warning(
+                "account_equity() returned 0 — skipping drawdown check "
+                "(possible disconnect)"
+            )
             return
-        self.update_peak_balance(current_balance)
-        if self._peak_balance > 0:
-            dd = (self._peak_balance - current_balance) / self._peak_balance * 100
+        self.update_peak_equity(current_equity)
+        if self._peak_equity > 0:
+            dd = (self._peak_equity - current_equity) / self._peak_equity * 100
             if dd >= cfg.MAX_DRAWDOWN_PCT:
                 self._halted = True
                 self._halt_reason = "max_drawdown"
                 log.error(
                     f"MAX DRAWDOWN HIT: {dd:.1f}% "
-                    f"(peak: ${self._peak_balance:.2f}, "
-                    f"current: ${current_balance:.2f}) — HALTING ALL TRADING"
+                    f"(peak equity: ${self._peak_equity:.2f}, "
+                    f"current equity: ${current_equity:.2f}) "
+                    f"— HALTING ALL TRADING"
                 )
+                self._persist_state()
 
     def periodic_risk_check(self):
         """Run periodic risk checks (call from main loop, not just on trade close)."""
@@ -206,10 +324,13 @@ class RiskManager:
         base = cfg.MAX_RISK_PER_TRADE_PCT
         worst_multiplier = 1.0
 
+        # FIXED: Use day-start balance (stable) for limit calculations
+        daily_base = max(self._day_start_balance, 1.0)
+        weekly_base = max(self._week_start_balance, 1.0)
+
         # Reduce risk after daily losses
-        capital_base = max(self.mt5.account_balance(), 1.0)
         if self._daily_pnl < 0:
-            daily_limit = capital_base * (cfg.DAILY_LOSS_LIMIT_PCT / 100)
+            daily_limit = daily_base * (cfg.DAILY_LOSS_LIMIT_PCT / 100)
             if daily_limit > 0:
                 loss_ratio = abs(self._daily_pnl) / daily_limit
                 if loss_ratio > 0.5:
@@ -217,7 +338,7 @@ class RiskManager:
 
         # Reduce risk after weekly losses
         if self._weekly_pnl < 0:
-            weekly_limit = capital_base * (cfg.WEEKLY_LOSS_LIMIT_PCT / 100)
+            weekly_limit = weekly_base * (cfg.WEEKLY_LOSS_LIMIT_PCT / 100)
             if weekly_limit > 0:
                 loss_ratio = abs(self._weekly_pnl) / weekly_limit
                 if loss_ratio > 0.5:
@@ -226,11 +347,11 @@ class RiskManager:
         return max(base * worst_multiplier, 0.25)  # minimum 0.25%
 
     # =====================================================================
-    #  TRADE JOURNAL
+    #  TRADE JOURNAL (atomic writes)
     # =====================================================================
 
     def log_trade(self, trade_data: dict):
-        """Append a trade entry to the JSON journal."""
+        """Append a trade entry to the JSON journal. Uses atomic write."""
         journal = []
         if self._journal_path.exists():
             try:
@@ -242,8 +363,18 @@ class RiskManager:
         trade_data["timestamp"] = datetime.now(timezone.utc).isoformat()
         journal.append(trade_data)
 
-        with open(self._journal_path, "w") as f:
-            json.dump(journal, f, indent=2, default=str)
+        # Atomic write: temp file → rename
+        try:
+            fd, tmp_path = tempfile.mkstemp(
+                dir=self._journal_path.parent, suffix=".tmp"
+            )
+            with os.fdopen(fd, "w") as f:
+                json.dump(journal, f, indent=2, default=str)
+            if self._journal_path.exists():
+                self._journal_path.unlink()
+            Path(tmp_path).rename(self._journal_path)
+        except Exception as e:
+            log.error(f"Failed to write trade journal: {e}")
 
     # =====================================================================
     #  STATS
@@ -260,7 +391,7 @@ class RiskManager:
                 self._wins_today / self._trades_today
                 if self._trades_today > 0 else 0
             ),
-            "peak_balance": self._peak_balance,
+            "peak_equity": self._peak_equity,
             "halted": self._halted,
             "halt_reason": self._halt_reason,
         }

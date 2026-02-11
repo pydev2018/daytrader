@@ -18,6 +18,7 @@ import config as cfg
 from core.mt5_connector import MT5Connector
 from core.confluence import analyze_symbol, SymbolAnalysis
 from core.signals import generate_signal, TradeSignal
+from core import news_aggregator
 from utils.logger import get_logger
 from utils import market_hours
 
@@ -32,6 +33,8 @@ class MarketScanner:
         self._universe: list[str] = []
         self._last_scan: dict[str, SymbolAnalysis] = {}
         self._scan_count: int = 0
+        self._news_impact: dict | None = None
+        self._last_news_update: float = 0
 
     def refresh_universe(self):
         """Discover all tradeable symbols from MT5."""
@@ -51,6 +54,10 @@ class MarketScanner:
             if not market_hours.is_market_open():
                 return None
 
+            # Check if symbol should be avoided due to news
+            if news_aggregator.should_avoid_symbol(symbol, self._news_impact):
+                return None
+
             spread = self.mt5.spread_pips(symbol)
             if spread > cfg.MAX_SPREAD_PIPS:
                 return None
@@ -61,6 +68,17 @@ class MarketScanner:
 
             # Generate signal if the setup qualifies
             signal = generate_signal(sa)
+            
+            # Adjust confidence based on news impact
+            if signal and self._news_impact:
+                adjustment = news_aggregator.get_news_confidence_adjustment(
+                    symbol, signal.direction, self._news_impact
+                )
+                if adjustment != 0:
+                    signal.confidence = max(0, min(100, signal.confidence + adjustment))
+                    signal.rationale.append(f"News impact: {adjustment:+d} confidence")
+                    log.info(f"{symbol}: News adjusted confidence by {adjustment:+d}")
+            
             return signal
 
         except Exception as e:
@@ -78,6 +96,18 @@ class MarketScanner:
         if not market_hours.is_market_open():
             log.info("Market closed — skipping scan")
             return []
+
+        # Update news impact every 5 minutes
+        now = time.time()
+        if now - self._last_news_update > 300:  # 5 minutes
+            try:
+                self._news_impact = news_aggregator.get_latest_news_impact()
+                self._last_news_update = now
+                if self._news_impact:
+                    avoid_count = len(self._news_impact.get("avoid_trading", []))
+                    log.info(f"News update: {avoid_count} symbols to avoid")
+            except Exception as e:
+                log.warning(f"News update failed: {e}")
 
         self._scan_count += 1
         start_time = time.time()
@@ -121,11 +151,23 @@ class MarketScanner:
                     f"winP={sig.win_probability:.0%}"
                 )
 
+        # Free DataFrame memory after signal generation (can be hundreds of MB)
+        self._gc_scan_cache()
+
         return signals
 
     def get_analysis(self, symbol: str) -> Optional[SymbolAnalysis]:
         """Return the latest analysis for a symbol (from cache)."""
         return self._last_scan.get(symbol)
+
+    def _gc_scan_cache(self):
+        """
+        Free memory: drop stored DataFrames from TimeframeAnalysis objects.
+        The DFs are only needed during signal generation and can be large.
+        """
+        for sym, sa in self._last_scan.items():
+            for tf, tfa in sa.timeframes.items():
+                tfa.df = None  # release DataFrame memory
 
     def top_opportunities(self, n: int = 10) -> list[dict]:
         """Return top N opportunities from the latest scan."""

@@ -8,11 +8,13 @@
   • Partial take-profit
   • Emergency exits
   • PnL tracking
+  • Weekend gap protection
 ===============================================================================
 """
 
 from __future__ import annotations
 
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 import numpy as np
@@ -25,6 +27,7 @@ from execution.trade_executor import TradeExecutor
 from risk.risk_manager import RiskManager
 from alerts.telegram import TelegramAlerter
 from utils.logger import get_logger
+from utils import market_hours
 
 log = get_logger("pos_monitor")
 
@@ -179,17 +182,24 @@ class PositionMonitor:
             self._partial_closed.discard(ticket)
             self._breakeven_set.discard(ticket)
 
-            # Query ALL deals for this position to compute true net PnL
-            # (includes entry commission, partial close P/L, final close P/L, swaps)
+            # FIXED: Query deals with explicit date range so history is always found.
+            # Use 30 days back to cover positions that were open for a long time.
             pnl = 0.0
             symbol = "?"
             try:
-                deals = mt5.history_deals_get(position=ticket)
+                from_date = datetime.now(timezone.utc) - timedelta(days=30)
+                to_date = datetime.now(timezone.utc) + timedelta(seconds=60)
+                deals = mt5.history_deals_get(from_date, to_date)
                 if deals:
                     for deal in deals:
                         d = deal._asdict()
-                        pnl += d.get("profit", 0) + d.get("commission", 0) + d.get("swap", 0)
-                        symbol = d.get("symbol", symbol)
+                        if d.get("position_id") == ticket:
+                            pnl += (
+                                d.get("profit", 0)
+                                + d.get("commission", 0)
+                                + d.get("swap", 0)
+                            )
+                            symbol = d.get("symbol", symbol)
             except Exception as e:
                 log.warning(f"Could not get deal history for #{ticket}: {e}")
 
@@ -214,6 +224,23 @@ class PositionMonitor:
         """Return set of our open position tickets."""
         return {pos.get("ticket", 0) for pos in self.mt5.our_positions()}
 
+    def check_weekend_protection(self):
+        """
+        Close all positions before the weekend to avoid gap risk.
+        Called from the main loop.  Triggers on Friday after 20:30 UTC
+        (30 minutes before typical market close).
+        """
+        now = market_hours.utcnow()
+        # Friday = weekday 4, close by 20:30 UTC (before 21:00 close)
+        if now.weekday() == 4 and now.hour >= 20 and now.minute >= 30:
+            positions = self.mt5.our_positions()
+            if positions:
+                log.warning(
+                    f"WEEKEND PROTECTION: Closing {len(positions)} positions "
+                    "before market close"
+                )
+                self.emergency_close_all(reason="weekend_protection")
+
     def emergency_close_all(self, reason: str = "emergency"):
         """Close ALL our open positions immediately."""
         positions = self.mt5.our_positions()
@@ -225,11 +252,15 @@ class PositionMonitor:
                 closed += 1
             else:
                 failed += 1
-                # Retry once
-                result = self.executor.close_position(pos, reason=reason)
-                if result:
-                    closed += 1
-                    failed -= 1
+                # Retry with exponential backoff (up to 3 attempts)
+                import time
+                for attempt in range(2):
+                    time.sleep(1 * (attempt + 1))
+                    result = self.executor.close_position(pos, reason=reason)
+                    if result:
+                        closed += 1
+                        failed -= 1
+                        break
 
         if positions:
             status = f"Closed {closed}/{len(positions)} positions."
