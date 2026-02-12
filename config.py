@@ -176,7 +176,19 @@ CONFIDENCE_WEIGHTS = {
 }
 assert sum(CONFIDENCE_WEIGHTS.values()) == 100, \
     f"CONFIDENCE_WEIGHTS must sum to 100, got {sum(CONFIDENCE_WEIGHTS.values())}"
-CONFIDENCE_THRESHOLD: float = 75.0   # minimum to take a trade
+CONFIDENCE_THRESHOLD: float = 75.0   # auto-accept: full Pristine alignment
+CONFIDENCE_REVIEW_BAND: float = 65.0 # review band floor: second-layer re-evaluation
+
+# ── Review Band: Core Strength Parameters ─────────────────────────────────
+# Trades scoring [REVIEW_BAND, THRESHOLD) are re-evaluated using the three
+# Pristine components that best predict trade success: Stage alignment,
+# Sweet Spot (multi-TF agreement), and Retracement Quality.
+# Peripheral weaknesses (S/R proximity, exact pivots, volume, indicators)
+# are forgiven IF the core is genuinely strong.
+REVIEW_BAND_CORE_MIN: float = 0.80   # average(stage, sweet_spot, retrace) must be ≥ this
+REVIEW_BAND_STAGE_MIN: float = 0.50  # macro trend must not be hostile
+REVIEW_BAND_SWEET_MIN: float = 0.40  # need at least moderate multi-TF agreement
+REVIEW_BAND_ANCHOR_MIN: float = 0.90 # at least one core component must be exceptional
 
 # ═════════════════════════════════════════════════════════════════════════════
 #  RISK MANAGEMENT

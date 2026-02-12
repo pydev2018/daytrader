@@ -39,6 +39,7 @@ class TradeSignal:
     rationale: list[str] = field(default_factory=list)
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     pristine_setup: str = ""    # "PBS A+", "PSS A", etc. or empty
+    review_band: bool = False   # True if admitted via review-band re-evaluation
 
     @property
     def risk_pips(self) -> float:
@@ -63,6 +64,7 @@ class TradeSignal:
             "rationale": self.rationale,
             "timestamp": self.timestamp.isoformat(),
             "pristine_setup": self.pristine_setup,
+            "review_band": self.review_band,
         }
 
 
@@ -71,14 +73,23 @@ def confidence_to_win_probability(confidence: float) -> float:
     Map confidence score (0-100) to estimated win probability.
     This is a conservative mapping — even high confidence doesn't guarantee wins.
 
-    75  → 0.55
+    Review-band trades (65-74.9) that pass core-strength re-evaluation get a
+    more conservative probability than auto-accept trades, which naturally
+    flows into smaller Kelly position sizes — the risk machinery self-adjusts.
+
+    65  → 0.50  (review-band floor — slight edge, sized small)
+    70  → 0.52
+    75  → 0.55  (auto-accept threshold)
     80  → 0.58
     85  → 0.62
     90  → 0.66
     95+ → 0.70
     """
-    if confidence < 75:
+    if confidence < 65:
         return 0.45
+    if confidence < 75:
+        # Review-band: 65→0.50, 74.9→0.54 (linear ramp, stays below auto-accept)
+        return 0.50 + (confidence - 65) * 0.004
     if confidence < 80:
         return 0.55 + (confidence - 75) * 0.006
     if confidence < 85:
@@ -99,14 +110,36 @@ def generate_signal(sa: SymbolAnalysis) -> Optional[TradeSignal]:
     if sa.trade_direction is None:
         return None
 
-    # ── Gate 2: Use pre-computed confluence score ──────────────────────
+    # ── Gate 2: Confidence threshold with review-band re-evaluation ────
     # FIXED: Do NOT recompute here.  analyze_symbol() already computed
     # the score with full DataFrames.  By now tfa.df has been freed
     # (set to None), so recomputing would skip trend-exhaustion penalties
     # that rely on DF access, yielding a higher (weaker) score.
     score = sa.confluence_score
-    if score < cfg.CONFIDENCE_THRESHOLD:
-        log.debug(f"{sa.symbol}: confidence {score:.1f} < {cfg.CONFIDENCE_THRESHOLD} — skip")
+    review_band_approved = False
+
+    if score >= cfg.CONFIDENCE_THRESHOLD:
+        pass  # Auto-accept: full Pristine alignment
+    elif score >= cfg.CONFIDENCE_REVIEW_BAND:
+        # Review band: strong enough to warrant a second look.
+        # Re-evaluate using core Pristine components only.
+        approved, reason = _passes_review_band(sa)
+        if approved:
+            review_band_approved = True
+            log.info(
+                f"{sa.symbol}: REVIEW BAND APPROVED — score {score:.1f} "
+                f"(below {cfg.CONFIDENCE_THRESHOLD}, above {cfg.CONFIDENCE_REVIEW_BAND}) "
+                f"│ {reason}"
+            )
+        else:
+            log.debug(
+                f"{sa.symbol}: review band REJECTED — score {score:.1f} │ {reason}"
+            )
+            return None
+    else:
+        log.debug(
+            f"{sa.symbol}: confidence {score:.1f} < {cfg.CONFIDENCE_REVIEW_BAND} — skip"
+        )
         return None
 
     # ── Gate 3: Spread filter ────────────────────────────────────────────
@@ -174,18 +207,87 @@ def generate_signal(sa: SymbolAnalysis) -> Optional[TradeSignal]:
         spread_pips=sa.spread_pips,
         rationale=rationale,
         pristine_setup=pristine_label,
+        review_band=review_band_approved,
     )
 
     setup_tag = f"  [{pristine_label}]" if pristine_label else ""
+    band_tag = "  [REVIEW-BAND]" if review_band_approved else ""
     log.info(
         f"SIGNAL: {signal.direction} {signal.symbol} "
         f"@ {signal.entry_price:.5f}  SL={signal.stop_loss:.5f}  "
         f"TP={signal.take_profit:.5f}  R:R={signal.risk_reward_ratio}  "
         f"Conf={signal.confidence:.1f}  WinP={signal.win_probability:.2f}"
-        f"{setup_tag}"
+        f"{setup_tag}{band_tag}"
     )
 
     return signal
+
+
+def _passes_review_band(sa: SymbolAnalysis) -> tuple[bool, str]:
+    """
+    Second-layer re-evaluation for trades in the review band [65, 75).
+
+    Philosophy: The overall score was held back by *peripheral* weaknesses
+    (e.g., mediocre S/R proximity, moderate pivot trend, low indicator
+    alignment), but the trade may still have a genuine edge if the three
+    Pristine components that best predict trade success are strong:
+
+        1. Stage alignment  — macro trend direction (Ch. 1)
+        2. Sweet spot        — multi-TF agreement    (Ch. 12)
+        3. Retracement       — pullback quality       (Ch. 6)
+
+    Criteria (ALL must pass):
+        A) Core strength: average(stage, sweet_spot, retracement) ≥ 0.80
+        B) No hostile macro: stage ≥ 0.50
+        C) Meaningful multi-TF: sweet_spot ≥ 0.40
+        D) At least one exceptional anchor: max(core components) ≥ 0.90
+        E) Not blind on entry: candle signal > 0 (we need *some* trigger)
+
+    Returns:
+        (approved: bool, reason: str)
+    """
+    bd = sa.score_breakdown
+    if not bd:
+        return False, "no score breakdown available"
+
+    stage = bd.get("stage", 0.0)
+    sweet = bd.get("sweet_spot", 0.0)
+    retrace = bd.get("retracement", 0.0)
+    candle = bd.get("candle", 0.0)
+
+    core_avg = (stage + sweet + retrace) / 3.0
+    anchor = max(stage, sweet, retrace)
+
+    # ── Criterion A: Core strength ───────────────────────────────────────
+    if core_avg < cfg.REVIEW_BAND_CORE_MIN:
+        return False, (
+            f"core avg {core_avg:.2f} < {cfg.REVIEW_BAND_CORE_MIN} "
+            f"(stage={stage:.2f} sweet={sweet:.2f} retrace={retrace:.2f})"
+        )
+
+    # ── Criterion B: Macro trend not hostile ─────────────────────────────
+    if stage < cfg.REVIEW_BAND_STAGE_MIN:
+        return False, f"stage {stage:.2f} < {cfg.REVIEW_BAND_STAGE_MIN} — macro unclear"
+
+    # ── Criterion C: Multi-TF agreement present ──────────────────────────
+    if sweet < cfg.REVIEW_BAND_SWEET_MIN:
+        return False, f"sweet_spot {sweet:.2f} < {cfg.REVIEW_BAND_SWEET_MIN} — no MTF alignment"
+
+    # ── Criterion D: At least one exceptional anchor ─────────────────────
+    if anchor < cfg.REVIEW_BAND_ANCHOR_MIN:
+        return False, (
+            f"no anchor ≥ {cfg.REVIEW_BAND_ANCHOR_MIN} "
+            f"(best={anchor:.2f} from stage/sweet/retrace)"
+        )
+
+    # ── Criterion E: Entry confirmation exists ───────────────────────────
+    if candle <= 0:
+        return False, "candle=0 — no entry confirmation on the entry timeframe"
+
+    return True, (
+        f"core={core_avg:.2f} (stage={stage:.2f} sweet={sweet:.2f} "
+        f"retrace={retrace:.2f}) anchor={anchor:.2f} candle={candle:.2f}"
+    )
 
 
 def _detect_pbs_pss(sa: SymbolAnalysis) -> dict | None:

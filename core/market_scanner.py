@@ -127,18 +127,47 @@ class MarketScanner:
         # Sort by confidence (best first)
         signals.sort(key=lambda s: s.confidence, reverse=True)
 
+        # ── Scan funnel diagnostic ──────────────────────────────────────
+        # Count how many symbols had a direction vs. scored above various thresholds
+        n_with_direction = sum(
+            1 for sa in self._last_scan.values()
+            if sa.trade_direction is not None
+        )
+        n_above_50 = sum(
+            1 for sa in self._last_scan.values()
+            if sa.confluence_score >= 50
+        )
+        n_in_review_band = sum(
+            1 for sa in self._last_scan.values()
+            if cfg.CONFIDENCE_REVIEW_BAND <= sa.confluence_score < cfg.CONFIDENCE_THRESHOLD
+        )
+        n_above_threshold = sum(
+            1 for sa in self._last_scan.values()
+            if sa.confluence_score >= cfg.CONFIDENCE_THRESHOLD
+        )
+        n_review_band_approved = sum(
+            1 for s in signals if s.review_band
+        )
+        n_auto_accepted = len(signals) - n_review_band_approved
+
         log.info(
             f"Scan #{self._scan_count} complete: "
             f"{len(signals)} signals from {len(scannable)} symbols "
-            f"in {elapsed:.1f}s"
+            f"in {elapsed:.1f}s  │  "
+            f"funnel: direction={n_with_direction} "
+            f"score>50={n_above_50} "
+            f"review-band({cfg.CONFIDENCE_REVIEW_BAND:.0f}-{cfg.CONFIDENCE_THRESHOLD:.0f})="
+            f"{n_in_review_band}→approved={n_review_band_approved} "
+            f"auto-accept(≥{cfg.CONFIDENCE_THRESHOLD:.0f})={n_above_threshold}"
         )
 
         if signals:
             for sig in signals[:5]:  # log top 5
+                band_tag = " [RB]" if sig.review_band else ""
                 log.info(
                     f"  → {sig.direction:4s} {sig.symbol:12s} "
                     f"conf={sig.confidence:5.1f}  R:R=1:{sig.risk_reward_ratio:.1f}  "
-                    f"winP={sig.win_probability:.0%}"
+                    f"winP={sig.win_probability:.0%}{band_tag}"
                 )
 
         # Free DataFrame memory after signal generation (can be hundreds of MB)
