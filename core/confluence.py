@@ -113,6 +113,8 @@ class SymbolAnalysis:
     multi_tf_sr: list = field(default_factory=list)
     higher_tf_stage: int = 0
     bbf_signals: list = field(default_factory=list)
+    # Score breakdown for review-band re-evaluation (populated by compute_confluence_score)
+    score_breakdown: dict = field(default_factory=dict)
 
 
 def analyze_timeframe(
@@ -845,6 +847,41 @@ def compute_confluence_score(sa: SymbolAnalysis) -> float:
         )
 
     sa.confluence_score = round(max(min(score, 100.0), 0.0), 2)
+
+    # ── Store component breakdown for review-band re-evaluation ──────────
+    sa.score_breakdown = {
+        "stage": stage_score,
+        "pivot": pivot_score,
+        "sweet_spot": sweet_score,
+        "sr_quality": sr_score,
+        "retracement": ret_score,
+        "candle": candle_score,
+        "volume": vol_score,
+        "indicators": ind_score,
+    }
+
+    # ── Diagnostic logging — shows exactly where each symbol stands ──────
+    # Logged at INFO for the top scorers (>50), DEBUG for the rest.
+    # This is essential for tuning and understanding why signals are rare.
+    if sa.confluence_score >= 50:
+        log.info(
+            f"{sa.symbol} {sa.trade_direction} score={sa.confluence_score:.1f} │ "
+            f"stage={stage_score:.2f}×20={stage_score*20:.0f} "
+            f"pivot={pivot_score:.2f}×15={pivot_score*15:.0f} "
+            f"sweet={sweet_score:.2f}×15={sweet_score*15:.0f} "
+            f"SR={sr_score:.2f}×15={sr_score*15:.0f} "
+            f"retrace={ret_score:.2f}×10={ret_score*10:.0f} "
+            f"candle={candle_score:.2f}×10={candle_score*10:.0f} "
+            f"vol={vol_score:.2f}×5={vol_score*5:.0f} "
+            f"ind={ind_score:.2f}×5={ind_score*5:.0f}"
+        )
+    elif sa.confluence_score > 0:
+        log.debug(
+            f"{sa.symbol} {sa.trade_direction} score={sa.confluence_score:.1f} │ "
+            f"stg={stage_score:.1f} piv={pivot_score:.1f} sw={sweet_score:.1f} "
+            f"sr={sr_score:.1f} ret={ret_score:.1f} cnd={candle_score:.1f}"
+        )
+
     return sa.confluence_score
 
 
