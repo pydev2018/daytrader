@@ -37,6 +37,9 @@ class TradeExecutor:
         self.mt5 = mt5_conn
         self.risk = risk_mgr
         self.alerter = alerter
+        # Prevent duplicate orders from being sent for the same symbol
+        # within the same execution cycle (race condition guard)
+        self._in_flight: set[str] = set()
 
     def execute_signal(self, signal: TradeSignal) -> Optional[dict]:
         """
@@ -49,8 +52,28 @@ class TradeExecutor:
         """
         symbol = signal.symbol
 
+        # ── Duplicate-order guard (idempotency) ──────────────────────────
+        if symbol in self._in_flight:
+            log.info(f"{symbol}: execution already in-flight — skip duplicate")
+            return None
+        self._in_flight.add(symbol)
+
+        try:
+            return self._execute_signal_inner(signal)
+        finally:
+            self._in_flight.discard(symbol)
+
+    def _execute_signal_inner(self, signal: TradeSignal) -> Optional[dict]:
+        """Inner execution logic, wrapped by in-flight guard."""
+        symbol = signal.symbol
+
         # ── Step 1: Risk gate ────────────────────────────────────────────
-        allowed, reason = self.risk.can_open_trade(symbol)
+        allowed, reason = self.risk.can_open_trade(
+            symbol,
+            direction=signal.direction,
+            current_price=signal.entry_price,
+            atr=getattr(signal, "atr", 0),
+        )
         if not allowed:
             log.info(f"{symbol}: blocked by risk manager — {reason}")
             return None
@@ -88,13 +111,34 @@ class TradeExecutor:
 
         if signal.direction == "BUY":
             order_type = mt5.ORDER_TYPE_BUY
-            price = tick["ask"]
+            price = round(tick["ask"], digits)
         else:
             order_type = mt5.ORDER_TYPE_SELL
-            price = tick["bid"]
+            price = round(tick["bid"], digits)
 
         sl = round(signal.stop_loss, digits)
         tp = round(signal.take_profit, digits)
+
+        # ── Enforce broker's minimum stop distance (STOPLEVEL) on entry ──
+        point = sym_info.get("point", 0.00001)
+        min_stop_points = sym_info.get("trade_stops_level", 0)
+        min_distance = min_stop_points * point
+
+        if min_distance > 0:
+            if signal.direction == "BUY":
+                if price - sl < min_distance:
+                    sl = round(price - min_distance - point, digits)
+                    log.warning(f"{symbol}: BUY SL adjusted to {sl} (STOPLEVEL)")
+                if tp - price < min_distance:
+                    tp = round(price + min_distance + point, digits)
+                    log.warning(f"{symbol}: BUY TP adjusted to {tp} (STOPLEVEL)")
+            else:
+                if sl - price < min_distance:
+                    sl = round(price + min_distance + point, digits)
+                    log.warning(f"{symbol}: SELL SL adjusted to {sl} (STOPLEVEL)")
+                if price - tp < min_distance:
+                    tp = round(price - min_distance - point, digits)
+                    log.warning(f"{symbol}: SELL TP adjusted to {tp} (STOPLEVEL)")
 
         # ── PRE-EXECUTION SANITY CHECK (production safety) ──────────────
         # Verify the ACTUAL dollar risk at execution price doesn't exceed
@@ -132,7 +176,7 @@ class TradeExecutor:
                         vol_step = sym_info.get("volume_step", 0.01)
                         vol_min = sym_info.get("volume_min", 0.01)
                         lots = max(vol_min, int(lots * scale / vol_step) * vol_step)
-                        lots = round(lots, 8)
+                        lots = round(lots, 2)
 
         # Determine filling mode using BITMASK flags (not ORDER_FILLING enums)
         filling_modes = sym_info.get("filling_mode", 0)
@@ -185,12 +229,19 @@ class TradeExecutor:
             return None
 
         retcode = result.get("retcode", 0)
-        if retcode != mt5.TRADE_RETCODE_DONE:
+        # Accept both full fill (10009) and partial fill (10010)
+        if retcode not in (mt5.TRADE_RETCODE_DONE, 10010):
             comment = result.get("comment", "unknown")
             log.error(
                 f"{symbol}: order REJECTED — retcode={retcode} comment={comment}"
             )
             return None
+
+        if retcode == 10010:
+            log.warning(
+                f"{symbol}: PARTIAL FILL — requested {lots}, "
+                f"filled {result.get('volume', 0)}"
+            )
 
         # ── Step 6: Log & alert ──────────────────────────────────────────
         order_ticket = result.get("order", 0)
@@ -282,14 +333,14 @@ class TradeExecutor:
         close_volume = volume * partial
         if vol_step > 0:
             close_volume = int(close_volume / vol_step) * vol_step
-        close_volume = round(close_volume, 8)  # float precision cleanup
+        close_volume = round(close_volume, 2)  # snap to broker precision
 
         if close_volume < vol_min:
             log.warning(f"Close volume {close_volume} < vol_min {vol_min} for {symbol} — skip")
             return None
 
         # Also ensure the REMAINING volume is valid (or close in full)
-        remaining = round(volume - close_volume, 8)
+        remaining = round(volume - close_volume, 2)
         if 0 < remaining < vol_min:
             close_volume = volume  # close in full if remainder would be below min
 
@@ -306,13 +357,15 @@ class TradeExecutor:
             else:
                 filling = mt5.ORDER_FILLING_RETURN
 
+        digits = sym_info.get("digits", 5) if sym_info else 5
+
         # Opposite order to close
         if pos_type == mt5.ORDER_TYPE_BUY:
             close_type = mt5.ORDER_TYPE_SELL
-            price = tick["bid"]
+            price = round(tick["bid"], digits)
         else:
             close_type = mt5.ORDER_TYPE_BUY
-            price = tick["ask"]
+            price = round(tick["ask"], digits)
 
         request = {
             "action": mt5.TRADE_ACTION_DEAL,
@@ -328,14 +381,27 @@ class TradeExecutor:
             "type_filling": filling,
         }
 
+        _CLOSE_OK = (mt5.TRADE_RETCODE_DONE, 10010)  # full or partial
         result = self.mt5.send_order(request)
-        if result is None or result.get("retcode") != mt5.TRADE_RETCODE_DONE:
-            # Try RETURN filling
+        if result is None or result.get("retcode") not in _CLOSE_OK:
+            # Refresh price and try RETURN filling
+            tick = self.mt5.symbol_tick(symbol)
+            if tick:
+                request["price"] = round(
+                    tick["bid"] if pos_type == mt5.ORDER_TYPE_BUY else tick["ask"],
+                    digits,
+                )
             request["type_filling"] = mt5.ORDER_FILLING_RETURN
             result = self.mt5.send_order(request)
-            if result is None or result.get("retcode") != mt5.TRADE_RETCODE_DONE:
+            if result is None or result.get("retcode") not in _CLOSE_OK:
                 log.error(f"Failed to close {symbol} #{ticket}: {result}")
                 return None
+
+        if result.get("retcode") == 10010:
+            log.warning(
+                f"{symbol} #{ticket}: partial close — "
+                f"requested {close_volume}, filled {result.get('volume', 0)}"
+            )
 
         pnl = position.get("profit", 0)
 
@@ -371,6 +437,7 @@ class TradeExecutor:
         """Modify the stop loss and/or take profit of an open position."""
         symbol = position.get("symbol", "")
         ticket = position.get("ticket", 0)
+        pos_type = position.get("type", 0)
 
         sym_info = self.mt5.symbol_info(symbol)
         if sym_info is None:
@@ -380,12 +447,63 @@ class TradeExecutor:
         current_sl = position.get("sl", 0)
         current_tp = position.get("tp", 0)
 
+        adjusted_sl = round(new_sl, digits) if new_sl is not None else current_sl
+        adjusted_tp = round(new_tp, digits) if new_tp is not None else current_tp
+
+        # ── FIXED: Enforce broker's minimum stop distance (STOPLEVEL) ────
+        # If the proposed SL/TP is too close to the current price, the
+        # broker will reject the modification, leaving the old (wider) SL.
+        # We auto-adjust to the minimum allowed distance + 1 point.
+        min_stop_points = sym_info.get("trade_stops_level", 0)
+        point = sym_info.get("point", 0.00001)
+        min_distance = min_stop_points * point
+
+        if min_distance > 0:
+            tick = self.mt5.symbol_tick(symbol)
+            if tick is None:
+                log.warning(f"Cannot get tick for {symbol} to validate SL/TP")
+                return False
+
+            if adjusted_sl != 0:
+                if pos_type == mt5.ORDER_TYPE_BUY:
+                    min_allowed_sl = tick["bid"] - min_distance
+                    if adjusted_sl > min_allowed_sl:
+                        adjusted_sl = round(min_allowed_sl - point, digits)
+                        log.warning(
+                            f"{symbol} #{ticket}: BUY SL adjusted to "
+                            f"{adjusted_sl:.{digits}f} (STOPLEVEL constraint)"
+                        )
+                else:  # SELL
+                    max_allowed_sl = tick["ask"] + min_distance
+                    if adjusted_sl < max_allowed_sl:
+                        adjusted_sl = round(max_allowed_sl + point, digits)
+                        log.warning(
+                            f"{symbol} #{ticket}: SELL SL adjusted to "
+                            f"{adjusted_sl:.{digits}f} (STOPLEVEL constraint)"
+                        )
+
+            if adjusted_tp != 0:
+                if pos_type == mt5.ORDER_TYPE_BUY:
+                    min_allowed_tp = tick["ask"] + min_distance
+                    if adjusted_tp < min_allowed_tp:
+                        log.warning(
+                            f"{symbol} #{ticket}: BUY TP {adjusted_tp:.{digits}f} "
+                            f"too close to price, may be rejected"
+                        )
+                else:  # SELL
+                    max_allowed_tp = tick["bid"] - min_distance
+                    if adjusted_tp > max_allowed_tp:
+                        log.warning(
+                            f"{symbol} #{ticket}: SELL TP {adjusted_tp:.{digits}f} "
+                            f"too close to price, may be rejected"
+                        )
+
         request = {
             "action": mt5.TRADE_ACTION_SLTP,
             "symbol": symbol,
             "position": ticket,
-            "sl": round(new_sl, digits) if new_sl is not None else current_sl,
-            "tp": round(new_tp, digits) if new_tp is not None else current_tp,
+            "sl": adjusted_sl,
+            "tp": adjusted_tp,
             "magic": cfg.MAGIC_NUMBER,
         }
 

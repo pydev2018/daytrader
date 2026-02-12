@@ -47,13 +47,21 @@ class RiskManager:
         self._week_start: datetime = self._day_start - timedelta(
             days=self._day_start.weekday()
         )
-        # FIXED: initialise peak from EQUITY (includes floating PnL)
-        self._peak_equity: float = cfg.TRADING_CAPITAL
+        # Initialise peak equity and balance from LIVE account, not config
+        _live_equity = self.mt5.account_equity()
+        _live_balance = self.mt5.account_balance()
+        self._peak_equity: float = _live_equity if _live_equity > 0 else cfg.TRADING_CAPITAL
         # Snapshot of balance at start of day — used as stable base for limits
-        self._day_start_balance: float = cfg.TRADING_CAPITAL
-        self._week_start_balance: float = cfg.TRADING_CAPITAL
+        self._day_start_balance: float = _live_balance if _live_balance > 0 else cfg.TRADING_CAPITAL
+        self._week_start_balance: float = _live_balance if _live_balance > 0 else cfg.TRADING_CAPITAL
         self._halted: bool = False
         self._halt_reason: str = ""
+
+        # ── Symbol cooldown tracking ─────────────────────────────────────
+        # Maps symbol → {"last_close_time": datetime, "last_result": "win"/"loss",
+        #                 "last_direction": "BUY"/"SELL", "last_entry_price": float,
+        #                 "consecutive_losses": int}
+        self._symbol_history: dict[str, dict] = {}
 
         self._journal_path = cfg.TRADE_JOURNAL_PATH
         self._journal_path.parent.mkdir(parents=True, exist_ok=True)
@@ -80,6 +88,7 @@ class RiskManager:
             "week_start_balance": self._week_start_balance,
             "halted": self._halted,
             "halt_reason": self._halt_reason,
+            "symbol_history": self._symbol_history,
             "saved_at": datetime.now(timezone.utc).isoformat(),
         }
         try:
@@ -88,11 +97,9 @@ class RiskManager:
                 dir=_RISK_STATE_PATH.parent, suffix=".tmp"
             )
             with os.fdopen(fd, "w") as f:
-                json.dump(state, f, indent=2)
-            # On Windows, need to remove target first
-            if _RISK_STATE_PATH.exists():
-                _RISK_STATE_PATH.unlink()
-            Path(tmp_path).rename(_RISK_STATE_PATH)
+                json.dump(state, f, indent=2, default=str)
+            # os.replace is atomic on Windows (single syscall) — no delete gap
+            os.replace(tmp_path, _RISK_STATE_PATH)
         except Exception as e:
             log.warning(f"Failed to persist risk state: {e}")
 
@@ -132,10 +139,29 @@ class RiskManager:
                     "week_start_balance", cfg.TRADING_CAPITAL
                 )
 
-            # Always restore peak and halt state
+            # Always restore peak, halt state, and symbol cooldown history
             self._peak_equity = state.get("peak_equity", cfg.TRADING_CAPITAL)
             self._halted = state.get("halted", False)
             self._halt_reason = state.get("halt_reason", "")
+            self._symbol_history = state.get("symbol_history", {})
+
+            # ── CRITICAL: Clear stale halts that no longer apply ─────────
+            # A daily halt from yesterday must not block today's trading.
+            if self._halted and self._halt_reason == "daily_loss_limit":
+                if saved_day_start.date() != today_start.date():
+                    self._halted = False
+                    self._halt_reason = ""
+                    log.info(
+                        "Cleared stale daily_loss_limit halt from previous day"
+                    )
+
+            if self._halted and self._halt_reason == "weekly_loss_limit":
+                if saved_week_start.date() < current_week_start.date():
+                    self._halted = False
+                    self._halt_reason = ""
+                    log.info(
+                        "Cleared stale weekly_loss_limit halt from previous week"
+                    )
 
             if self._halted:
                 log.warning(
@@ -269,10 +295,106 @@ class RiskManager:
     def halt_reason(self) -> str:
         return self._halt_reason
 
-    def can_open_trade(self, symbol: str) -> tuple[bool, str]:
+    # =====================================================================
+    #  SYMBOL COOLDOWN — prevents re-entry churn
+    # =====================================================================
+
+    def record_symbol_close(
+        self, symbol: str, won: bool, direction: str, entry_price: float
+    ):
+        """
+        Called when a position on *symbol* closes.  Records the result so
+        that can_open_trade() can enforce cooldown periods.
+
+        Cooldown logic (from a quant perspective):
+        - After SL (loss): wait 4 hours minimum.  The higher-TF trend that
+          generated this signal hasn't changed yet; re-entering immediately
+          repeats the same losing setup.
+        - After TP (win):  wait 1 hour minimum.  The trend may continue, but
+          require a fresh pullback / new pattern, not the same stale signal.
+        - After 2+ consecutive losses on same symbol: wait 24 hours.
+          At that point the thesis is broken.
+        """
+        hist = self._symbol_history.get(symbol, {})
+        prev_consec = hist.get("consecutive_losses", 0)
+
+        self._symbol_history[symbol] = {
+            "last_close_time": datetime.now(timezone.utc).isoformat(),
+            "last_result": "win" if won else "loss",
+            "last_direction": direction,
+            "last_entry_price": entry_price,
+            "consecutive_losses": 0 if won else prev_consec + 1,
+        }
+        log.info(
+            f"{symbol}: recorded {'WIN' if won else 'LOSS'} "
+            f"(consecutive losses: {self._symbol_history[symbol]['consecutive_losses']})"
+        )
+        self._persist_state()  # cooldowns must survive crashes
+
+    def _check_symbol_cooldown(self, symbol: str) -> tuple[bool, str]:
+        """
+        Check if *symbol* is in cooldown after a recent close.
+        Returns (allowed, reason).
+        """
+        hist = self._symbol_history.get(symbol)
+        if hist is None:
+            return True, "OK"  # never traded this symbol
+
+        try:
+            last_close = datetime.fromisoformat(hist["last_close_time"])
+        except (KeyError, ValueError):
+            return True, "OK"
+
+        now = datetime.now(timezone.utc)
+        hours_since = (now - last_close).total_seconds() / 3600
+        consec_losses = hist.get("consecutive_losses", 0)
+
+        # 2+ consecutive losses → 24-hour cooldown (thesis is broken)
+        if consec_losses >= 2:
+            if hours_since < 24:
+                remaining = 24 - hours_since
+                return False, (
+                    f"{symbol}: {consec_losses} consecutive losses — "
+                    f"cooldown {remaining:.1f}h remaining"
+                )
+
+        # After a loss → 4-hour cooldown
+        if hist.get("last_result") == "loss":
+            if hours_since < 4:
+                remaining = 4 - hours_since
+                return False, (
+                    f"{symbol}: post-loss cooldown — {remaining:.1f}h remaining"
+                )
+
+        # After a win → 1-hour cooldown (don't immediately chase)
+        if hist.get("last_result") == "win":
+            if hours_since < 1:
+                remaining = 1 - hours_since
+                return False, (
+                    f"{symbol}: post-win cooldown — {remaining:.1f}h remaining"
+                )
+
+        return True, "OK"
+
+    def get_symbol_history(self, symbol: str) -> Optional[dict]:
+        """Return cooldown history for a symbol (used by confluence engine)."""
+        return self._symbol_history.get(symbol)
+
+    def can_open_trade(
+        self,
+        symbol: str,
+        direction: Optional[str] = None,
+        current_price: float = 0.0,
+        atr: float = 0.0,
+    ) -> tuple[bool, str]:
         """
         Master gate: check ALL risk conditions before allowing a trade.
         Returns (allowed: bool, reason: str).
+
+        Optional params for the "fresh setup" check:
+          direction    — "BUY" or "SELL"
+          current_price — live price of the instrument
+          atr          — current H1 ATR
         """
         # ── Halt check ───────────────────────────────────────────────────
         if self._halted:
@@ -287,6 +409,30 @@ class RiskManager:
         for pos in our_positions:
             if pos.get("symbol") == symbol:
                 return False, f"Already have a position in {symbol}"
+
+        # ── Symbol cooldown (post-SL / post-TP) ─────────────────────────
+        allowed, reason = self._check_symbol_cooldown(symbol)
+        if not allowed:
+            return False, reason
+
+        # ── Fresh setup requirement ──────────────────────────────────────
+        # If we recently traded this symbol in the SAME direction, require
+        # that price has pulled back at least 0.5 ATR from the last entry.
+        # This prevents entering at the exact same price repeatedly.
+        if direction and current_price > 0 and atr > 0:
+            hist = self._symbol_history.get(symbol)
+            if hist and hist.get("last_direction") == direction:
+                last_entry = hist.get("last_entry_price", 0)
+                if last_entry > 0:
+                    distance = abs(current_price - last_entry)
+                    min_pullback = atr * 0.5
+                    if distance < min_pullback:
+                        return False, (
+                            f"{symbol}: price hasn't pulled back enough from "
+                            f"last entry ({last_entry:.5f}) — "
+                            f"need {min_pullback:.5f} movement, "
+                            f"only {distance:.5f} so far"
+                        )
 
         # ── Correlation check ────────────────────────────────────────────
         # Use substring matching: Oanda symbols have suffixes (e.g. EURUSD.sml)
@@ -310,6 +456,21 @@ class RiskManager:
             return False, f"Margin level too low: {margin_level:.1f}%"
 
         return True, "OK"
+
+    def clear_halt(self, confirm: str = ""):
+        """
+        Manual admin method to clear a halt (e.g., after max_drawdown).
+        Requires explicit confirmation string to prevent accidental calls.
+        """
+        if confirm != "I_ACCEPT_THE_RISK":
+            log.warning("clear_halt called without proper confirmation — ignored")
+            return False
+        prev_reason = self._halt_reason
+        self._halted = False
+        self._halt_reason = ""
+        self._persist_state()
+        log.warning(f"HALT MANUALLY CLEARED (was: {prev_reason})")
+        return True
 
     # =====================================================================
     #  RISK-ADJUSTED SIZING
@@ -370,9 +531,8 @@ class RiskManager:
             )
             with os.fdopen(fd, "w") as f:
                 json.dump(journal, f, indent=2, default=str)
-            if self._journal_path.exists():
-                self._journal_path.unlink()
-            Path(tmp_path).rename(self._journal_path)
+            # os.replace is atomic on Windows — no delete gap where crash loses both files
+            os.replace(tmp_path, self._journal_path)
         except Exception as e:
             log.error(f"Failed to write trade journal: {e}")
 

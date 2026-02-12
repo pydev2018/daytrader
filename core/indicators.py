@@ -410,10 +410,85 @@ def compute_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
 #  TREND DETERMINATION
 # ═════════════════════════════════════════════════════════════════════════════
 
+def determine_trend_pristine(df: pd.DataFrame) -> dict:
+    """
+    Primary trend determination using the Pristine Method (Ch. 1, 10).
+
+    Calls the pristine module for pivot-based trend and stage analysis.
+    Indicators are NOT used for the trend call — only pivots and stages.
+
+    Returns dict with:
+        trend              : "BULLISH" | "BEARISH" | "NEUTRAL"
+        stage              : 1 | 2 | 3 | 4
+        tradeable          : bool
+        allowed_direction  : "BUY" | "SELL" | None
+        pivot_trend        : dict from pristine.determine_trend_from_pivots
+        retracement        : dict from pristine.analyze_retracement
+        stage_data         : dict from pristine.classify_stage
+        pivots             : list of pivot dicts
+    """
+    from core.pristine import (
+        find_pivots,
+        classify_pivots_major_minor,
+        determine_trend_from_pivots,
+        classify_stage,
+        analyze_retracement,
+    )
+
+    result = {
+        "trend": "NEUTRAL", "stage": 1, "tradeable": False,
+        "allowed_direction": None, "pivot_trend": {},
+        "retracement": {}, "stage_data": {}, "pivots": [],
+    }
+
+    if df is None or df.empty or len(df) < 30:
+        return result
+
+    # Step 1: Find pivots
+    pivots = find_pivots(df)
+    pivots = classify_pivots_major_minor(pivots)
+    result["pivots"] = pivots
+
+    # Step 2: Determine trend from pivots (Ch. 10)
+    pv_trend = determine_trend_from_pivots(pivots)
+    result["pivot_trend"] = pv_trend
+
+    # Step 3: Classify stage (Ch. 1)
+    stage_data = classify_stage(df, pivot_trend=pv_trend)
+    result["stage_data"] = stage_data
+    result["stage"] = stage_data.get("stage", 1)
+    result["tradeable"] = stage_data.get("tradeable", False)
+    result["allowed_direction"] = stage_data.get("allowed_direction")
+
+    # Step 4: Retracement quality (Ch. 6)
+    direction = 1 if pv_trend["trend"] == "uptrend" else (-1 if pv_trend["trend"] == "downtrend" else 0)
+    if direction != 0:
+        result["retracement"] = analyze_retracement(df, pivots, direction)
+
+    # Map to standard trend labels used by the rest of the system
+    if stage_data.get("stage") == 2:
+        result["trend"] = "BULLISH"
+    elif stage_data.get("stage") == 4:
+        result["trend"] = "BEARISH"
+    elif pv_trend["trend"] == "uptrend":
+        result["trend"] = "BULLISH"
+    elif pv_trend["trend"] == "downtrend":
+        result["trend"] = "BEARISH"
+    else:
+        result["trend"] = "NEUTRAL"
+
+    return result
+
+
 def determine_trend(df: pd.DataFrame) -> str:
     """
     Determine the dominant trend from the last row of computed indicators.
     Returns: 'BULLISH', 'BEARISH', or 'NEUTRAL'.
+
+    NOTE: This is the legacy indicator-based trend function.
+    The Pristine Method uses determine_trend_pristine() as the primary
+    trend determination.  This function is now used as a secondary
+    confirmation signal (weighted at 5% in confluence scoring).
     """
     if df is None or df.empty or len(df) < 2:
         return "NEUTRAL"

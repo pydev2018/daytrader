@@ -182,7 +182,7 @@ class WolfEngine:
                         f"Trading halted: {self.risk_mgr.halt_reason} — "
                         "monitoring positions only"
                     )
-                    time.sleep(cfg.POSITION_CHECK_SECONDS)
+                    self._inter_cycle_surveillance(cfg.POSITION_CHECK_SECONDS)
                     continue
 
                 # ── Market open check ────────────────────────────────────
@@ -190,6 +190,21 @@ class WolfEngine:
                     if self._cycle_count % 60 == 1:
                         log.info("Market closed — waiting …")
                     time.sleep(cfg.SCAN_INTERVAL_SECONDS)
+                    continue
+
+                # ── Friday wind-down check ─────────────────────────────
+                # After Friday 12:00 ET: no new trades.  Existing positions
+                # are still managed by check_all_positions() above.
+                # The weekend emergency close at 16:30 ET is the backstop.
+                if not market_hours.is_new_trade_allowed():
+                    if self._cycle_count % 30 == 1:
+                        log.info(
+                            "Friday wind-down — no new trades, "
+                            "managing existing positions only"
+                        )
+                    elapsed = time.time() - cycle_start
+                    remaining = max(1, cfg.SCAN_INTERVAL_SECONDS - elapsed)
+                    self._inter_cycle_surveillance(remaining)
                     continue
 
                 # ── Full scan ────────────────────────────────────────────
@@ -212,23 +227,57 @@ class WolfEngine:
                 # ── Day/week boundary resets ──────────────────────────────
                 self._check_period_resets()
 
-                # ── Sleep until next cycle ───────────────────────────────
+                # ── Inter-cycle tick surveillance ───────────────────────
+                # Instead of sleeping idle, run fast tick checks every
+                # TICK_CHECK_SECONDS until the next full analysis cycle.
+                # Fast checks use only symbol_info_tick (free, local memory)
+                # and cached thresholds — no bar fetches, no CPU-heavy work.
                 elapsed = time.time() - cycle_start
-                sleep_time = max(1, cfg.SCAN_INTERVAL_SECONDS - elapsed)
+                remaining = max(1, cfg.SCAN_INTERVAL_SECONDS - elapsed)
                 log.debug(
                     f"Cycle #{self._cycle_count} done in {elapsed:.1f}s — "
-                    f"sleeping {sleep_time:.0f}s"
+                    f"tick surveillance for {remaining:.0f}s"
                 )
-
-                # Sleep in small increments to remain responsive to shutdown
-                for _ in range(int(sleep_time)):
-                    if _shutdown_requested:
-                        break
-                    time.sleep(1)
+                self._inter_cycle_surveillance(remaining)
 
             except Exception as e:
                 log.error(f"Error in main loop cycle: {e}", exc_info=True)
                 time.sleep(10)
+
+    def _inter_cycle_surveillance(self, duration_seconds: float):
+        """
+        Run fast tick checks for the specified duration, then return.
+
+        This fills the gap between full 60s analysis cycles with lightweight
+        tick-level surveillance.  Each check costs only 1 × symbol_info_tick
+        per open position (local memory read — near-zero latency).
+
+        Catches rapid adverse moves and macro S/R zone entries within
+        TICK_CHECK_SECONDS instead of waiting up to SCAN_INTERVAL_SECONDS.
+        """
+        global _shutdown_requested
+        end_time = time.time() + duration_seconds
+        tick_interval = cfg.TICK_CHECK_SECONDS
+
+        while time.time() < end_time and not _shutdown_requested:
+            # Sleep first, then check — gives the market time to move
+            sleep_chunk = min(tick_interval, end_time - time.time())
+            if sleep_chunk <= 0:
+                break
+            # Sleep in 1s increments for shutdown responsiveness
+            for _ in range(max(1, int(sleep_chunk))):
+                if _shutdown_requested or time.time() >= end_time:
+                    break
+                time.sleep(1)
+
+            if _shutdown_requested:
+                break
+
+            # Fast tick surveillance on all open positions
+            try:
+                self.pos_monitor.fast_check_all_positions()
+            except Exception as e:
+                log.error(f"Fast tick surveillance error: {e}")
 
     def _process_signals(self, signals: list[TradeSignal]):
         """Process and execute qualifying signals."""
@@ -236,37 +285,51 @@ class WolfEngine:
             if _shutdown_requested:
                 break
 
-            # Check risk one more time
-            allowed, reason = self.risk_mgr.can_open_trade(signal.symbol)
+            # Check risk one more time (with fresh setup parameters)
+            allowed, reason = self.risk_mgr.can_open_trade(
+                signal.symbol,
+                direction=signal.direction,
+                current_price=signal.entry_price,
+                atr=signal.atr,
+            )
             if not allowed:
-                log.debug(f"{signal.symbol}: blocked — {reason}")
+                log.info(f"{signal.symbol}: blocked — {reason}")
                 continue
 
-            # Optional: AI review for high-value trades
+            # Informational AI review — logged and alerted, NEVER blocks
+            # The Pristine method is the sole decision-maker.
+            # AI adds a second opinion for the trade journal / Telegram,
+            # but it cannot veto, reject, or weaken a signal.
             if cfg.OPENAI_API_KEY and signal.confidence >= 85:
-                review = ai_analyst.review_trade(signal.to_dict())
-                if review:
-                    adj = review.get("confidence_adjustment", 0)
-                    approved = review.get("approval", True)
-                    reasoning = review.get("reasoning", "")
+                try:
+                    review = ai_analyst.review_trade(signal.to_dict())
+                    if review:
+                        reasoning = review.get("reasoning", "")
+                        risk_notes = review.get("risk_notes", "")
+                        approved = review.get("approval", True)
+                        adj = review.get("confidence_adjustment", 0)
 
-                    log.info(
-                        f"AI review for {signal.symbol}: "
-                        f"approved={approved} adj={adj:+d} — {reasoning}"
-                    )
-
-                    if not approved:
-                        log.info(f"{signal.symbol}: AI rejected trade")
-                        continue
-
-                    signal.confidence = max(0, min(100, signal.confidence + adj))
-                    signal.win_probability = confidence_to_win_probability(signal.confidence)
-                    if signal.confidence < cfg.CONFIDENCE_THRESHOLD:
                         log.info(
-                            f"{signal.symbol}: confidence dropped to "
-                            f"{signal.confidence:.1f} after AI review — skip"
+                            f"AI review for {signal.symbol} (INFO ONLY): "
+                            f"opinion={approved} adj={adj:+d} — {reasoning}"
                         )
-                        continue
+                        signal.rationale.append(
+                            f"AI opinion: {'favourable' if approved else 'cautious'} "
+                            f"({reasoning})"
+                        )
+                        if risk_notes:
+                            signal.rationale.append(f"AI risk note: {risk_notes}")
+
+                        # Send to Telegram so you see the AI's opinion
+                        self.alerter.custom(
+                            f"<b>AI REVIEW (info only)</b>\n"
+                            f"{signal.direction} {signal.symbol} "
+                            f"conf={signal.confidence:.0f}\n"
+                            f"Opinion: {'✓ favourable' if approved else '⚠ cautious'}\n"
+                            f"{reasoning}"
+                        )
+                except Exception as e:
+                    log.warning(f"AI review failed (non-blocking): {e}")
 
             # Execute
             result = self.executor.execute_signal(signal)

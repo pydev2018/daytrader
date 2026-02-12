@@ -220,5 +220,224 @@ class TestAtomicJournalWrite:
                 rm_mod._RISK_STATE_PATH = orig_state
 
 
+class TestSymbolCooldown:
+    """Tests for the symbol cooldown system (prevents re-entry churn)."""
+
+    def test_post_loss_cooldown_blocks_reentry(self):
+        """After a loss, symbol should be blocked for 4 hours."""
+        from risk.risk_manager import RiskManager
+        mt5 = FakeMT5(balance=10000, equity=10000)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import config as cfg
+            orig_journal = cfg.TRADE_JOURNAL_PATH
+            orig_base = cfg.BASE_DIR
+            import risk.risk_manager as rm_mod
+            orig_state = rm_mod._RISK_STATE_PATH
+
+            _setup_risk_manager(mt5, tmpdir)
+
+            try:
+                rm = RiskManager(mt5)
+                # Record a loss on WHEAT
+                rm.record_symbol_close("WHEAT", won=False, direction="BUY", entry_price=550.0)
+
+                # Immediately try to trade WHEAT again
+                allowed, reason = rm.can_open_trade("WHEAT")
+                assert not allowed, "Should block WHEAT after loss"
+                assert "cooldown" in reason.lower()
+            finally:
+                cfg.TRADE_JOURNAL_PATH = orig_journal
+                cfg.BASE_DIR = orig_base
+                rm_mod._RISK_STATE_PATH = orig_state
+
+    def test_post_win_short_cooldown(self):
+        """After a win, cooldown is shorter (1 hour)."""
+        from risk.risk_manager import RiskManager
+        mt5 = FakeMT5(balance=10000, equity=10000)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import config as cfg
+            orig_journal = cfg.TRADE_JOURNAL_PATH
+            orig_base = cfg.BASE_DIR
+            import risk.risk_manager as rm_mod
+            orig_state = rm_mod._RISK_STATE_PATH
+
+            _setup_risk_manager(mt5, tmpdir)
+
+            try:
+                rm = RiskManager(mt5)
+                rm.record_symbol_close("WHEAT", won=True, direction="BUY", entry_price=550.0)
+
+                # Immediately blocked (within 1 hour)
+                allowed, reason = rm.can_open_trade("WHEAT")
+                assert not allowed, "Should block WHEAT immediately after win"
+                assert "cooldown" in reason.lower()
+            finally:
+                cfg.TRADE_JOURNAL_PATH = orig_journal
+                cfg.BASE_DIR = orig_base
+                rm_mod._RISK_STATE_PATH = orig_state
+
+    def test_consecutive_losses_longer_cooldown(self):
+        """2+ consecutive losses → 24-hour cooldown."""
+        from risk.risk_manager import RiskManager
+        mt5 = FakeMT5(balance=10000, equity=10000)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import config as cfg
+            orig_journal = cfg.TRADE_JOURNAL_PATH
+            orig_base = cfg.BASE_DIR
+            import risk.risk_manager as rm_mod
+            orig_state = rm_mod._RISK_STATE_PATH
+
+            _setup_risk_manager(mt5, tmpdir)
+
+            try:
+                rm = RiskManager(mt5)
+                # Two losses in a row
+                rm.record_symbol_close("WHEAT", won=False, direction="BUY", entry_price=550.0)
+                rm.record_symbol_close("WHEAT", won=False, direction="BUY", entry_price=548.0)
+
+                assert rm._symbol_history["WHEAT"]["consecutive_losses"] == 2
+
+                allowed, reason = rm.can_open_trade("WHEAT")
+                assert not allowed
+                assert "consecutive" in reason.lower()
+            finally:
+                cfg.TRADE_JOURNAL_PATH = orig_journal
+                cfg.BASE_DIR = orig_base
+                rm_mod._RISK_STATE_PATH = orig_state
+
+    def test_win_resets_consecutive_losses(self):
+        """A win should reset the consecutive loss counter."""
+        from risk.risk_manager import RiskManager
+        mt5 = FakeMT5(balance=10000, equity=10000)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import config as cfg
+            orig_journal = cfg.TRADE_JOURNAL_PATH
+            orig_base = cfg.BASE_DIR
+            import risk.risk_manager as rm_mod
+            orig_state = rm_mod._RISK_STATE_PATH
+
+            _setup_risk_manager(mt5, tmpdir)
+
+            try:
+                rm = RiskManager(mt5)
+                rm.record_symbol_close("WHEAT", won=False, direction="BUY", entry_price=550.0)
+                rm.record_symbol_close("WHEAT", won=False, direction="BUY", entry_price=548.0)
+                assert rm._symbol_history["WHEAT"]["consecutive_losses"] == 2
+
+                # Win resets counter
+                rm.record_symbol_close("WHEAT", won=True, direction="BUY", entry_price=552.0)
+                assert rm._symbol_history["WHEAT"]["consecutive_losses"] == 0
+            finally:
+                cfg.TRADE_JOURNAL_PATH = orig_journal
+                cfg.BASE_DIR = orig_base
+                rm_mod._RISK_STATE_PATH = orig_state
+
+    def test_cooldown_expired_allows_trade(self):
+        """After cooldown expires, trading should be allowed again."""
+        from risk.risk_manager import RiskManager
+        mt5 = FakeMT5(balance=10000, equity=10000)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import config as cfg
+            orig_journal = cfg.TRADE_JOURNAL_PATH
+            orig_base = cfg.BASE_DIR
+            import risk.risk_manager as rm_mod
+            orig_state = rm_mod._RISK_STATE_PATH
+
+            _setup_risk_manager(mt5, tmpdir)
+
+            try:
+                rm = RiskManager(mt5)
+                rm.record_symbol_close("WHEAT", won=False, direction="BUY", entry_price=550.0)
+
+                # Simulate that 5 hours have passed (post-loss cooldown is 4h)
+                past = datetime.now(timezone.utc) - timedelta(hours=5)
+                rm._symbol_history["WHEAT"]["last_close_time"] = past.isoformat()
+
+                allowed, reason = rm.can_open_trade("WHEAT")
+                assert allowed, f"Should allow after cooldown expired, got: {reason}"
+            finally:
+                cfg.TRADE_JOURNAL_PATH = orig_journal
+                cfg.BASE_DIR = orig_base
+                rm_mod._RISK_STATE_PATH = orig_state
+
+    def test_fresh_setup_blocks_same_price_reentry(self):
+        """Price must pull back 0.5 ATR before re-entering same direction."""
+        from risk.risk_manager import RiskManager
+        mt5 = FakeMT5(balance=10000, equity=10000)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import config as cfg
+            orig_journal = cfg.TRADE_JOURNAL_PATH
+            orig_base = cfg.BASE_DIR
+            import risk.risk_manager as rm_mod
+            orig_state = rm_mod._RISK_STATE_PATH
+
+            _setup_risk_manager(mt5, tmpdir)
+
+            try:
+                rm = RiskManager(mt5)
+                rm.record_symbol_close("EURUSD", won=True, direction="BUY", entry_price=1.1000)
+
+                # Expire the cooldown so that only the fresh-setup check triggers
+                past = datetime.now(timezone.utc) - timedelta(hours=2)
+                rm._symbol_history["EURUSD"]["last_close_time"] = past.isoformat()
+
+                # Try to re-enter at almost the same price (ATR = 0.002)
+                allowed, reason = rm.can_open_trade(
+                    "EURUSD", direction="BUY", current_price=1.1003, atr=0.002
+                )
+                # min_pullback = 0.002 * 0.5 = 0.001, distance = 0.0003 < 0.001
+                assert not allowed, f"Should block re-entry at same price, got: {reason}"
+                assert "pull" in reason.lower()
+
+                # Different direction should be fine
+                allowed2, reason2 = rm.can_open_trade(
+                    "EURUSD", direction="SELL", current_price=1.1003, atr=0.002
+                )
+                assert allowed2, f"Should allow SELL after BUY win, got: {reason2}"
+            finally:
+                cfg.TRADE_JOURNAL_PATH = orig_journal
+                cfg.BASE_DIR = orig_base
+                rm_mod._RISK_STATE_PATH = orig_state
+
+    def test_cooldown_persists_across_restart(self):
+        """Symbol cooldown history should survive restarts."""
+        from risk.risk_manager import RiskManager
+        mt5 = FakeMT5(balance=10000, equity=10000)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import config as cfg
+            orig_journal = cfg.TRADE_JOURNAL_PATH
+            orig_base = cfg.BASE_DIR
+            import risk.risk_manager as rm_mod
+            orig_state = rm_mod._RISK_STATE_PATH
+
+            _setup_risk_manager(mt5, tmpdir)
+
+            try:
+                rm1 = RiskManager(mt5)
+                rm1.record_symbol_close("WHEAT", won=False, direction="BUY", entry_price=550.0)
+                rm1._persist_state()
+
+                # Simulate restart
+                rm2 = RiskManager(mt5)
+                assert "WHEAT" in rm2._symbol_history
+                assert rm2._symbol_history["WHEAT"]["last_result"] == "loss"
+                assert rm2._symbol_history["WHEAT"]["consecutive_losses"] == 1
+
+                # Should still be blocked
+                allowed, reason = rm2.can_open_trade("WHEAT")
+                assert not allowed, "Cooldown should survive restart"
+            finally:
+                cfg.TRADE_JOURNAL_PATH = orig_journal
+                cfg.BASE_DIR = orig_base
+                rm_mod._RISK_STATE_PATH = orig_state
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

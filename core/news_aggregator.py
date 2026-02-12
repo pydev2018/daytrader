@@ -159,14 +159,122 @@ HIGH_IMPACT_EVENTS = {
 }
 
 
-def is_high_impact_event_window() -> Optional[Dict]:
+def is_high_impact_event_window(symbol: str = "") -> Optional[Dict]:
     """
-    Check if we're currently in a high-impact event window.
-    Returns event info if in window, None otherwise.
+    Check if we're currently inside an avoidance window for a high-impact
+    economic event (NFP, FOMC, ECB, BOE, BOJ).
+
+    Uses the Finnhub economic calendar to find upcoming HIGH-impact events,
+    then matches them against the hardcoded HIGH_IMPACT_EVENTS windows.
+
+    Parameters
+    ----------
+    symbol : str
+        If provided, only returns a hit when the event affects a currency
+        present in this symbol (e.g., "EURUSD" is affected by ECB but
+        not by BOJ).  If empty, returns any active event window.
+
+    Returns
+    -------
+    dict with event info if inside an avoidance window, None otherwise.
     """
-    # This would need a proper economic calendar API for real-time data
-    # For now, we rely on the news feeds detecting upcoming events
-    return None
+    try:
+        now = datetime.now(timezone.utc)
+        # Fetch events within the next 4 hours (includes currently active)
+        upcoming = get_upcoming_high_impact_events(hours_ahead=4)
+
+        # Also check the cached economic calendar for events that already
+        # started (up to avoid_minutes_after in the past)
+        max_lookback_minutes = max(
+            evt.get("avoid_minutes_after", 120)
+            for evt in HIGH_IMPACT_EVENTS.values()
+        )
+
+        for event in upcoming:
+            event_name = event.get("event", "")
+            event_country = event.get("country", "").upper()
+            event_time_str = event.get("time", "")
+
+            if not event_time_str:
+                continue
+
+            try:
+                event_time = datetime.fromisoformat(
+                    event_time_str.replace("Z", "+00:00")
+                )
+            except Exception:
+                continue
+
+            # Match against known HIGH_IMPACT_EVENTS by keyword
+            matched_event = None
+            for key, config in HIGH_IMPACT_EVENTS.items():
+                key_lower = key.lower()
+                name_lower = event_name.lower()
+                # Match by event key in the event name
+                if key_lower in name_lower:
+                    matched_event = (key, config)
+                    break
+                # Match by country → currency mapping
+                country_currency_map = {
+                    "US": "USD", "EU": "EUR", "GB": "GBP",
+                    "JP": "JPY", "AU": "AUD", "CA": "CAD",
+                    "NZ": "NZD", "CH": "CHF",
+                }
+                event_ccy = country_currency_map.get(event_country, "")
+                if event_ccy in config.get("currencies", []):
+                    # Only match "interest rate" / "rate decision" / etc.
+                    if any(kw in name_lower for kw in [
+                        "interest rate", "rate decision", "monetary policy",
+                        "employment", "non-farm", "payroll", "cpi",
+                        "inflation", "gdp",
+                    ]):
+                        matched_event = (key, config)
+                        break
+
+            if not matched_event:
+                continue
+
+            event_key, event_cfg = matched_event
+            before_mins = event_cfg.get("avoid_minutes_before", 30)
+            after_mins = event_cfg.get("avoid_minutes_after", 60)
+            affected_ccys = event_cfg.get("currencies", [])
+
+            # Check if current time is within the avoidance window
+            window_start = event_time - timedelta(minutes=before_mins)
+            window_end = event_time + timedelta(minutes=after_mins)
+
+            if window_start <= now <= window_end:
+                # If a symbol is specified, check currency match
+                if symbol:
+                    symbol_upper = symbol.upper()
+                    if not any(ccy in symbol_upper for ccy in affected_ccys):
+                        continue  # event doesn't affect this symbol
+
+                minutes_until = (event_time - now).total_seconds() / 60
+                phase = "BEFORE" if now < event_time else "AFTER"
+
+                result = {
+                    "event_key": event_key,
+                    "event_name": event_name,
+                    "event_time": event_time_str,
+                    "affected_currencies": affected_ccys,
+                    "phase": phase,
+                    "minutes_to_event": round(minutes_until, 1),
+                    "window_start": window_start.isoformat(),
+                    "window_end": window_end.isoformat(),
+                }
+                log.warning(
+                    f"HIGH-IMPACT EVENT WINDOW: {event_key} — "
+                    f"{phase} event by {abs(minutes_until):.0f} min "
+                    f"(affects {', '.join(affected_ccys)})"
+                )
+                return result
+
+        return None
+
+    except Exception as e:
+        log.warning(f"High-impact event check failed: {e}")
+        return None
 
 
 # ═════════════════════════════════════════════════════════════════════════════

@@ -94,16 +94,24 @@ class MT5Connector:
         return self._connected and mt5.terminal_info() is not None
 
     def ensure_connected(self):
-        """Reconnect if the connection was dropped, with retry."""
-        if not self.is_connected:
-            log.warning("MT5 connection lost — reconnecting …")
-            for attempt in range(1, 4):
-                if self.connect():
-                    log.info(f"MT5 reconnected on attempt {attempt}")
-                    return
-                log.warning(f"MT5 reconnect attempt {attempt}/3 failed")
-                time.sleep(2 * attempt)  # backoff: 2s, 4s, 6s
-            log.error("MT5 reconnect failed after 3 attempts")
+        """Reconnect if the connection was dropped, with retry.
+
+        Raises ConnectionError after 3 failed attempts so callers cannot
+        silently proceed on a dead connection (which would make
+        our_positions() return [] and bypass risk limits).
+        """
+        if self.is_connected:
+            return
+        log.warning("MT5 connection lost — reconnecting …")
+        for attempt in range(1, 4):
+            mt5.shutdown()  # clean stale IPC state before retry
+            if self.connect():
+                log.info(f"MT5 reconnected on attempt {attempt}")
+                return
+            log.warning(f"MT5 reconnect attempt {attempt}/3 failed")
+            time.sleep(2 * attempt)  # backoff: 2s, 4s, 6s
+        log.error("MT5 reconnect failed after 3 attempts")
+        raise ConnectionError("MT5 connection lost and could not be restored")
 
     # =====================================================================
     #  ACCOUNT
@@ -171,6 +179,7 @@ class MT5Connector:
 
     def select_symbol(self, symbol: str) -> bool:
         """Ensure *symbol* is visible in MarketWatch."""
+        self.ensure_connected()
         info = mt5.symbol_info(symbol)
         if info is None:
             return False
@@ -216,6 +225,9 @@ class MT5Connector:
         raw_spread = tick.ask - tick.bid
         point = info.point
         if point == 0:
+            return 999.0
+        # Zero or negative spread = frozen symbol / no LP quoting
+        if raw_spread <= 0:
             return 999.0
 
         digits = info.digits
@@ -354,6 +366,7 @@ class MT5Connector:
         self.ensure_connected()
         result = mt5.order_check(request)
         if result is None:
+            log.error(f"order_check returned None: {mt5.last_error()}")
             return None
         return result._asdict()
 
@@ -364,7 +377,13 @@ class MT5Connector:
         if result is None:
             log.error(f"order_send returned None: {mt5.last_error()}")
             return None
-        return result._asdict()
+        rd = result._asdict()
+        if rd.get("retcode") not in (mt5.TRADE_RETCODE_DONE, 10010):
+            log.warning(
+                f"order_send non-success: retcode={rd.get('retcode')} "
+                f"comment={rd.get('comment')} symbol={request.get('symbol')}"
+            )
+        return rd
 
     # =====================================================================
     #  HISTORY
