@@ -1,0 +1,242 @@
+{
+  "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260204a.htm": {
+    "timestamp": "2026-02-11T17:22:06.917845+00:00",
+    "data": {
+      "source": "Federal Reserve",
+      "type": "central_bank",
+      "title": "Federal Reserve Board finalizes hypothetical scenarios for its annual stress test and votes to maintain the current stress test-related capital requirements until public feedback can be considered",
+      "summary": "Federal Reserve Board finalizes hypothetical scenarios for its annual stress test and votes to maintain the current stress test-related capital requirements until public feedback can be considered",
+      "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260204a.htm",
+      "time": "Wed, 4 Feb 2026 21:30:00 GMT",
+      "category": "monetary_policy"
+    }
+  },
+  "https://www.federalreserve.gov/newsevents/pressreleases/orders20260130a.htm": {
+    "timestamp": "2026-02-11T17:22:06.917845+00:00",
+    "data": {
+      "source": "Federal Reserve",
+      "type": "central_bank",
+      "title": "Federal Reserve Board announces approval of application by Cornerstone Capital Bancorp, Inc.",
+      "summary": "Federal Reserve Board announces approval of application by Cornerstone Capital Bancorp, Inc.",
+      "url": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260130a.htm",
+      "time": "Fri, 30 Jan 2026 21:00:00 GMT",
+      "category": "monetary_policy"
+    }
+  },
+  "https://www.federalreserve.gov/newsevents/pressreleases/other20260129a.htm": {
+    "timestamp": "2026-02-11T17:22:06.917845+00:00",
+    "data": {
+      "source": "Federal Reserve",
+      "type": "central_bank",
+      "title": "Federal Reserve Board announces appointment of seven members, including four new members, to its Insurance Policy Advisory Committee (IPAC)",
+      "summary": "Federal Reserve Board announces appointment of seven members, including four new members, to its Insurance Policy Advisory Committee (IPAC)",
+      "url": "https://www.federalreserve.gov/newsevents/pressreleases/other20260129a.htm",
+      "time": "Thu, 29 Jan 2026 18:30:00 GMT",
+      "category": "monetary_policy"
+    }
+  },
+  "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260128a.htm": {
+    "timestamp": "2026-02-11T17:22:08.054154+00:00",
+    "data": {
+      "source": "Federal Reserve",
+      "type": "central_bank",
+      "title": "Federal Reserve issues FOMC statement",
+      "summary": "Federal Reserve issues FOMC statement",
+      "url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260128a.htm",
+      "time": "Wed, 28 Jan 2026 19:00:00 GMT",
+      "category": "monetary_policy"
+    }
+  },
+  "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260128b.htm": {
+    "timestamp": "2026-02-11T17:22:08.054154+00:00",
+    "data": {
+      "source": "Federal Reserve",
+      "type": "central_bank",
+      "title": "Federal Open Market Committee reaffirms its \"Statement on Longer-Run Goals and Monetary Policy Strategy\"",
+      "summary": "Federal Open Market Committee reaffirms its &quot;Statement on Longer-Run Goals and Monetary Policy Strategy&quot;",
+      "url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260128b.htm",
+      "time": "Wed, 28 Jan 2026 19:00:00 GMT",
+      "category": "monetary_policy"
+    }
+  },
+  "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260106a.htm": {
+    "timestamp": "2026-02-11T17:22:08.054154+00:00",
+    "data": {
+      "source": "Federal Reserve",
+      "type": "central_bank",
+      "title": "Minutes of the Board's discount rate meeting on December 10, 2025",
+      "summary": "Minutes of the Board's discount rate meeting on December 10, 2025",
+      "url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260106a.htm",
+      "time": "Tue, 6 Jan 2026 19:00:00 GMT",
+      "category": "monetary_policy"
+    }
+  },
+  "https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp260211~2822ae9612.en.html": {
+    "timestamp": "2026-02-11T17:22:09.617822+00:00",
+    "data": {
+      "source": "ECB",
+      "type": "central_bank",
+      "title": "Isabel Schnabel: Made in Europe",
+      "summary": "",
+      "url": "https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp260211~2822ae9612.en.html",
+      "time": "Wed, 11 Feb 2026 18:00:00 +0100",
+      "category": "monetary_policy"
+    }
+  },
+  "https://www.ecb.europa.eu//press/pr/date/2026/html/ecb.pr260211_1~dd029e0063.en.html": {
+    "timestamp": "2026-02-11T17:22:09.617822+00:00",
+    "data": {
+      "source": "ECB",
+      "type": "central_bank",
+      "title": "New data release: ECB wage tracker continues to suggest normalisation of negotiated wage pressures in 2026",
+      "summary": "",
+      "url": "https://www.ecb.europa.eu//press/pr/date/2026/html/ecb.pr260211_1~dd029e0063.en.html",
+      "time": "Wed, 11 Feb 2026 10:00:00 +0100",
+      "category": "monetary_policy"
+    }
+  },
+  "https://www.ecb.europa.eu//press/pr/date/2026/html/ecb.pr260211~ec2605cbb3.en.html": {
+    "timestamp": "2026-02-11T17:22:09.617822+00:00",
+    "data": {
+      "source": "ECB",
+      "type": "central_bank",
+      "title": "ECB appoints Thomas Broeng Jorgensen as Director General Specialised Institutions and Less Significant Institutions",
+      "summary": "",
+      "url": "https://www.ecb.europa.eu//press/pr/date/2026/html/ecb.pr260211~ec2605cbb3.en.html",
+      "time": "Wed, 11 Feb 2026 09:15:00 +0100",
+      "category": "monetary_policy"
+    }
+  },
+  "http://www.ecb.europa.eu/stats/exchange/eurofxref/html/eurofxref-graph-usd.en.html?date=2026-02-11&rate=1.1900": {
+    "timestamp": "2026-02-11T17:22:10.369265+00:00",
+    "data": {
+      "source": "ECB",
+      "type": "central_bank",
+      "title": "1.1900 USD = 1 EUR 2026-02-11 ECB Reference rate",
+      "summary": "1 EUR buys 1.1900 US dollar (USD) - The reference exchange rates are published both by electronic market information providers and on the ECB's website shortly after the concertation procedure has been completed. Reference rates are published according to the same  calendar as the TARGET system.",
+      "url": "http://www.ecb.europa.eu/stats/exchange/eurofxref/html/eurofxref-graph-usd.en.html?date=2026-02-11&rate=1.1900",
+      "time": "2026-02-11T14:15:00+01:00",
+      "category": "monetary_policy"
+    }
+  },
+  "http://www.ecb.europa.eu/stats/exchange/eurofxref/html/eurofxref-graph-usd.en.html?date=2026-02-10&rate=1.1894": {
+    "timestamp": "2026-02-11T17:22:10.369265+00:00",
+    "data": {
+      "source": "ECB",
+      "type": "central_bank",
+      "title": "1.1894 USD = 1 EUR 2026-02-10 ECB Reference rate",
+      "summary": "1 EUR buys 1.1894 US dollar (USD) - The reference exchange rates are published both by electronic market information providers and on the ECB's website shortly after the concertation procedure has been completed. Reference rates are published according to the same  calendar as the TARGET system.",
+      "url": "http://www.ecb.europa.eu/stats/exchange/eurofxref/html/eurofxref-graph-usd.en.html?date=2026-02-10&rate=1.1894",
+      "time": "2026-02-10T14:15:00+01:00",
+      "category": "monetary_policy"
+    }
+  },
+  "http://www.ecb.europa.eu/stats/exchange/eurofxref/html/eurofxref-graph-usd.en.html?date=2026-02-09&rate=1.1886": {
+    "timestamp": "2026-02-11T17:22:10.369265+00:00",
+    "data": {
+      "source": "ECB",
+      "type": "central_bank",
+      "title": "1.1886 USD = 1 EUR 2026-02-09 ECB Reference rate",
+      "summary": "1 EUR buys 1.1886 US dollar (USD) - The reference exchange rates are published both by electronic market information providers and on the ECB's website shortly after the concertation procedure has been completed. Reference rates are published according to the same  calendar as the TARGET system.",
+      "url": "http://www.ecb.europa.eu/stats/exchange/eurofxref/html/eurofxref-graph-usd.en.html?date=2026-02-09&rate=1.1886",
+      "time": "2026-02-09T14:15:00+01:00",
+      "category": "monetary_policy"
+    }
+  },
+  "https://www.bankofengland.co.uk/markets/market-notices/2026/february/foreign-currency-reserves-10-february-2026": {
+    "timestamp": "2026-02-11T17:22:11.068213+00:00",
+    "data": {
+      "source": "Bank of England",
+      "type": "central_bank",
+      "title": "Foreign Currency Reserves 2026 \u2013 Market Notice 10 February 2026",
+      "summary": "Not for distribution, directly or indirectly, in or into the United States, Canada, Australia, Japan or any other jurisdiction where it is unlawful to distribute this announcement",
+      "url": "https://www.bankofengland.co.uk/markets/market-notices/2026/february/foreign-currency-reserves-10-february-2026",
+      "time": "Tue, 10 Feb 2026 16:30:00 Z",
+      "category": "monetary_policy"
+    }
+  },
+  "https://www.bankofengland.co.uk/markets/market-notices/2026/february/foreign-currency-reserves-9-february-2026": {
+    "timestamp": "2026-02-11T17:22:11.068213+00:00",
+    "data": {
+      "source": "Bank of England",
+      "type": "central_bank",
+      "title": "Foreign Currency Reserves 2026 \u2013 Market Notice 9 February 2026",
+      "summary": "Not for distribution, directly or indirectly, in or into the United States, Canada, Australia, Japan or any other jurisdiction where it is unlawful to distribute this announcement",
+      "url": "https://www.bankofengland.co.uk/markets/market-notices/2026/february/foreign-currency-reserves-9-february-2026",
+      "time": "Mon, 09 Feb 2026 12:30:00 Z",
+      "category": "monetary_policy"
+    }
+  },
+  "https://www.bankofengland.co.uk/statistics/notice/2026/green-notice-2026-01": {
+    "timestamp": "2026-02-11T17:22:11.068213+00:00",
+    "data": {
+      "source": "Bank of England",
+      "type": "central_bank",
+      "title": "Green notice 2026/01",
+      "summary": "Green notices cover significant and/or significant proposals for Bank of England reporting. If any of these proposals are finalised and are to be implemented, they will appear in a statistical notice.",
+      "url": "https://www.bankofengland.co.uk/statistics/notice/2026/green-notice-2026-01",
+      "time": "Mon, 09 Feb 2026 09:00:00 Z",
+      "category": "monetary_policy"
+    }
+  },
+  "https://www.bankofengland.co.uk/asset-purchase-facility/2025/2025-q4": {
+    "timestamp": "2026-02-11T17:22:13.345946+00:00",
+    "data": {
+      "source": "Bank of England",
+      "type": "central_bank",
+      "title": "Asset Purchase Facility Quarterly Report - 2025 Q4",
+      "summary": "In the interests of openness and transparency, we publish a quarterly report on the transactions carried out as part of the Asset Purchase Facility. The reports are published shortly after the end of each quarter.",
+      "url": "https://www.bankofengland.co.uk/asset-purchase-facility/2025/2025-q4",
+      "time": "Tue, 10 Feb 2026 12:00:00 Z",
+      "category": "monetary_policy"
+    }
+  },
+  "https://www.bankofengland.co.uk/markets/market-intelligence/survey-results/2026/market-participants-survey-results-february-2026": {
+    "timestamp": "2026-02-11T17:22:13.345946+00:00",
+    "data": {
+      "source": "Bank of England",
+      "type": "central_bank",
+      "title": "Market Participants Survey results - February 2026",
+      "summary": "Expectations for monetary policy from experts in UK rates markets.",
+      "url": "https://www.bankofengland.co.uk/markets/market-intelligence/survey-results/2026/market-participants-survey-results-february-2026",
+      "time": "Fri, 06 Feb 2026 12:00:00 Z",
+      "category": "monetary_policy"
+    }
+  },
+  "https://www.bankofengland.co.uk/weekly-report/2026/4-february-2026": {
+    "timestamp": "2026-02-11T17:22:13.345946+00:00",
+    "data": {
+      "source": "Bank of England",
+      "type": "central_bank",
+      "title": "Bank of England Weekly Report 4 February 2026",
+      "summary": "Our weekly report contains the latest data on our assets and liabilities. We publish it every Thursday.",
+      "url": "https://www.bankofengland.co.uk/weekly-report/2026/4-february-2026",
+      "time": "Thu, 05 Feb 2026 15:00:00 Z",
+      "category": "monetary_policy"
+    }
+  },
+  "http://www.boj.or.jp/en/statistics/outline/notice_2026/not260210a.htm": {
+    "timestamp": "2026-02-11T17:22:14.165572+00:00",
+    "data": {
+      "source": "Bank of Japan",
+      "type": "central_bank",
+      "title": "Release of Latest \"Loans and Bills Discounted by Sector\" and \"Loans to Households\" Data",
+      "summary": "",
+      "url": "http://www.boj.or.jp/en/statistics/outline/notice_2026/not260210a.htm",
+      "time": "Tue, 10 Feb 2026 08:50:00 +0900",
+      "category": "monetary_policy"
+    }
+  },
+  "http://www.boj.or.jp/en/statistics/money/ms/ms2601.pdf": {
+    "timestamp": "2026-02-11T17:22:14.165572+00:00",
+    "data": {
+      "source": "Bank of Japan",
+      "type": "central_bank",
+      "title": "Money Stock (Jan.)",
+      "summary": "",
+      "url": "http://www.boj.or.jp/en/statistics/money/ms/ms2601.pdf",
+      "time": "Tue, 10 Feb 2026 08:50:00 +0900",
+      "category": "monetary_policy"
+    }
+  }
+}

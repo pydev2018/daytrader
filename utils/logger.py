@@ -6,26 +6,33 @@
 
 import logging
 import sys
+import time
+import threading
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 import config as cfg
 
+_setup_lock = threading.Lock()
+
 
 def setup_logging(name: str = "wolf") -> logging.Logger:
     """Create and return a configured logger instance."""
-    cfg.LOG_DIR.mkdir(parents=True, exist_ok=True)
+    with _setup_lock:
+        cfg.LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-    logger = logging.getLogger(name)
-    logger.setLevel(getattr(logging, cfg.LOG_LEVEL.upper(), logging.INFO))
+        logger = logging.getLogger(name)
+        logger.setLevel(getattr(logging, cfg.LOG_LEVEL.upper(), logging.INFO))
 
-    if logger.handlers:
-        return logger
+        if logger.handlers:
+            return logger
 
-    fmt = logging.Formatter(
-        "[%(asctime)s] %(levelname)-8s %(name)-18s │ %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+        fmt = logging.Formatter(
+            "[%(asctime)s UTC] %(levelname)-8s %(name)-18s │ %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+        # Force UTC timestamps — matches MT5 server time and market hours logic
+        fmt.converter = time.gmtime
 
     # ── Console handler ──────────────────────────────────────────────────
     ch = logging.StreamHandler(sys.stdout)

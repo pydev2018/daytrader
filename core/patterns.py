@@ -4,6 +4,13 @@
 ===============================================================================
   Every detector returns a label (str) and a directional bias (int):
       +1 = bullish,  -1 = bearish,  0 = neutral / continuation
+
+  Pristine Method integration (Ch. 2, 13):
+    - Candle pattern strengths are now CONTEXT-DEPENDENT.
+      A hammer at a major S/R level with declining volume is strong (0.9).
+      A hammer in the middle of nowhere is weak (0.4).
+    - Breakout Bar Failure (BBF) detection from Ch. 13.
+    - WRB/NRB/COG/Tail classification layered on top.
 ===============================================================================
 """
 
@@ -387,3 +394,120 @@ def scan_chart_patterns(df: pd.DataFrame, lookback: int = 5) -> list[dict]:
     patterns.extend(detect_double_top_bottom(swing_highs, swing_lows))
     patterns.extend(detect_head_shoulders(swing_highs, swing_lows))
     return patterns
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  PRISTINE CONTEXT-AWARE PATTERN SCORING  (Ch. 2, 3, 13)
+# ═════════════════════════════════════════════════════════════════════════════
+
+def scan_patterns_with_context(
+    df: pd.DataFrame,
+    sr_levels: list[dict] | None = None,
+    stage: dict | None = None,
+    pristine_candle: dict | None = None,
+) -> list[dict]:
+    """
+    Enhanced pattern scanner that adjusts strength based on context (Ch. 2).
+
+    The Pristine Method says: "A hammer means nothing by itself.
+    A hammer at a major support level, in a Stage 2 pullback, with declining
+    volume — THAT is a high-probability signal."
+
+    Parameters:
+        df         : OHLCV DataFrame
+        sr_levels  : S/R levels from structures module (for location context)
+        stage      : Stage classification dict (for trend context)
+        pristine_candle : last candle classification from pristine module
+    """
+    # Start with the base patterns
+    base_patterns = scan_candlestick_patterns(df)
+    if not base_patterns:
+        return []
+
+    # If we have no context, return base patterns unchanged
+    if not sr_levels and not stage:
+        return base_patterns
+
+    last = df.iloc[-1]
+    current_price = last["close"]
+
+    # Estimate ATR for proximity checks
+    if "atr" in df.columns:
+        atr = df["atr"].iloc[-1]
+        if np.isnan(atr) or atr == 0:
+            atr = (df["high"] - df["low"]).iloc[-14:].mean()
+    else:
+        atr = (df["high"] - df["low"]).iloc[-14:].mean()
+
+    if atr == 0:
+        return base_patterns
+
+    # Check if price is near a strong S/R level
+    at_strong_sr = False
+    sr_kind = ""
+    if sr_levels:
+        for lvl in sr_levels[:5]:  # top 5 strongest
+            dist = abs(current_price - lvl.get("price", 0))
+            if dist <= atr * 1.5:
+                at_strong_sr = True
+                sr_kind = lvl.get("kind", "")
+                break
+
+    # Check stage context
+    in_tradeable_stage = False
+    stage_dir = 0
+    if stage:
+        in_tradeable_stage = stage.get("tradeable", False)
+        allowed = stage.get("allowed_direction")
+        if allowed == "BUY":
+            stage_dir = 1
+        elif allowed == "SELL":
+            stage_dir = -1
+
+    # WRB bonus from Pristine candle classification
+    is_wrb = pristine_candle.get("type") == "WRB" if pristine_candle else False
+    has_tail = pristine_candle.get("tail") is not None if pristine_candle else False
+
+    # ── Adjust strengths ─────────────────────────────────────────────────
+    for pat in base_patterns:
+        original_strength = pat["strength"]
+        bias = pat["bias"]
+        boost = 0.0
+        penalty = 0.0
+
+        # Location boost: pattern at strong S/R level
+        if at_strong_sr:
+            if (bias == 1 and sr_kind in ("S", "SR")) or \
+               (bias == -1 and sr_kind in ("R", "SR")):
+                boost += 0.15  # bullish at support or bearish at resistance
+            elif (bias == 1 and sr_kind == "R") or \
+                 (bias == -1 and sr_kind == "S"):
+                penalty += 0.15  # bullish at resistance = bad
+        else:
+            penalty += 0.10  # pattern not at any S/R = weaker
+
+        # Stage alignment boost
+        if in_tradeable_stage and bias == stage_dir:
+            boost += 0.10  # pattern aligns with stage direction
+        elif in_tradeable_stage and bias == -stage_dir:
+            penalty += 0.15  # pattern against stage = much weaker
+
+        # WRB + pattern boost (Ch. 2 — conviction)
+        if is_wrb and pristine_candle.get("bias") == bias:
+            boost += 0.10
+
+        # Tail confirmation (Ch. 2)
+        if has_tail:
+            if (bias == 1 and pristine_candle.get("tail") == "demand_rejection") or \
+               (bias == -1 and pristine_candle.get("tail") == "supply_rejection"):
+                boost += 0.05
+
+        # Apply adjustments
+        new_strength = original_strength + boost - penalty
+        pat["strength"] = round(max(0.1, min(1.0, new_strength)), 2)
+
+        # Tag with context info
+        pat["at_sr"] = at_strong_sr
+        pat["stage_aligned"] = in_tradeable_stage and bias == stage_dir
+
+    return base_patterns

@@ -96,8 +96,7 @@ def compute_position_size(
         )
 
     if test_profit is None or test_profit <= 0:
-        # Fallback: estimate from contract size
-        sl_points = sl_distance / point
+        # Fallback: estimate from contract size and tick value
         tick_value = sym_info.get("trade_tick_value", 1.0)
         tick_size = sym_info.get("trade_tick_size", point)
         if tick_size > 0:
@@ -119,9 +118,20 @@ def compute_position_size(
 
     lots = min(lots, vol_max)
 
+    # ── Guard: if vol_min exceeds the intended risk, don't trade ─────────
+    # On small accounts or wide-SL instruments (gold, indices), the
+    # minimum lot may represent 2-5x the risk budget.  Never over-risk.
+    if lots == vol_min and raw_lots < vol_min * 0.66:
+        actual_dollar_risk = lots * test_profit
+        log.warning(
+            f"{symbol}: vol_min={vol_min} exceeds risk budget "
+            f"(${actual_dollar_risk:.2f} vs target ${dollar_risk:.2f}) — skip"
+        )
+        return 0.0
+
     # ── Margin check ─────────────────────────────────────────────────────
     margin = mt5_conn.calc_margin(action, symbol, lots, entry_price)
-    free_margin = mt5_conn.account_info().get("margin_free", 0)
+    free_margin = acc_info.get("margin_free", 0)  # reuse same snapshot
     if margin is not None and free_margin > 0:
         if margin > free_margin * 0.8:  # don't use more than 80% of free margin
             # Scale down

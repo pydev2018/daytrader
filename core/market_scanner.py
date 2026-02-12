@@ -33,8 +33,8 @@ class MarketScanner:
         self._universe: list[str] = []
         self._last_scan: dict[str, SymbolAnalysis] = {}
         self._scan_count: int = 0
-        self._news_impact: dict | None = None
-        self._last_news_update: float = 0
+        self._last_event_check: float = 0
+        self._active_event_window: dict | None = None
 
     def refresh_universe(self):
         """Discover all tradeable symbols from MT5."""
@@ -54,8 +54,16 @@ class MarketScanner:
             if not market_hours.is_market_open():
                 return None
 
-            # Check if symbol should be avoided due to news
-            if news_aggregator.should_avoid_symbol(symbol, self._news_impact):
+            # Deterministic high-impact event avoidance (NFP, FOMC, ECB, etc.)
+            # Uses Finnhub economic calendar + hardcoded avoidance windows.
+            # No AI involved — purely rule-based and backtestable.
+            event = news_aggregator.is_high_impact_event_window(symbol)
+            if event:
+                log.info(
+                    f"{symbol}: SKIPPING — inside {event['event_key']} "
+                    f"avoidance window ({event['phase']} by "
+                    f"{abs(event['minutes_to_event']):.0f} min)"
+                )
                 return None
 
             spread = self.mt5.spread_pips(symbol)
@@ -68,17 +76,7 @@ class MarketScanner:
 
             # Generate signal if the setup qualifies
             signal = generate_signal(sa)
-            
-            # Adjust confidence based on news impact
-            if signal and self._news_impact:
-                adjustment = news_aggregator.get_news_confidence_adjustment(
-                    symbol, signal.direction, self._news_impact
-                )
-                if adjustment != 0:
-                    signal.confidence = max(0, min(100, signal.confidence + adjustment))
-                    signal.rationale.append(f"News impact: {adjustment:+d} confidence")
-                    log.info(f"{symbol}: News adjusted confidence by {adjustment:+d}")
-            
+
             return signal
 
         except Exception as e:
@@ -97,17 +95,9 @@ class MarketScanner:
             log.info("Market closed — skipping scan")
             return []
 
-        # Update news impact every 5 minutes
-        now = time.time()
-        if now - self._last_news_update > 300:  # 5 minutes
-            try:
-                self._news_impact = news_aggregator.get_latest_news_impact()
-                self._last_news_update = now
-                if self._news_impact:
-                    avoid_count = len(self._news_impact.get("avoid_trading", []))
-                    log.info(f"News update: {avoid_count} symbols to avoid")
-            except Exception as e:
-                log.warning(f"News update failed: {e}")
+        # Check for high-impact event windows (deterministic, no AI)
+        # This is cached per scan cycle — is_high_impact_event_window()
+        # is called per-symbol in scan_single() for currency-specific matching.
 
         self._scan_count += 1
         start_time = time.time()

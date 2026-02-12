@@ -128,17 +128,51 @@ FVG_MIN_GAP_ATR_MULT: float = 0.5  # FVG must be >= 0.5x ATR to count
 LIQUIDITY_SWEEP_LOOKBACK: int = 20
 
 # ═════════════════════════════════════════════════════════════════════════════
+#  PRISTINE METHOD PARAMETERS  (Greg Capra methodology)
+# ═════════════════════════════════════════════════════════════════════════════
+# Moving Averages as visual aids (Ch. 4)
+PRISTINE_MA_FAST: int = 20        # EMA — pullback reference
+PRISTINE_MA_MED: int = 40         # EMA — intermediate trend health
+PRISTINE_MA_SLOW: int = 200       # SMA — institutional trend
+
+# Pivots (Ch. 10)
+PIVOT_LOOKBACK: int = 5           # bars each side for swing detection
+
+# Retracement thresholds (Ch. 6)
+RETRACEMENT_PRISTINE: float = 0.40   # < 40% = best quality pullback
+RETRACEMENT_HEALTHY: float = 0.50    # 40-50% = standard pullback
+RETRACEMENT_DEEP: float = 0.60       # 50-60% = deep, trend weakening
+RETRACEMENT_MAX_GATE: float = 0.80   # > 80% = trend broken, reject
+
+# Volume classification (Ch. 5)
+VOL_PROFESSIONAL_THRESHOLD: float = 1.8
+VOL_DECLINING_PULLBACK: float = 0.7
+
+# Candle classification (Ch. 2)
+WRB_BODY_RATIO: float = 2.0      # body > 2x avg = Wide Range Body
+NRB_BODY_RATIO: float = 0.5      # body < 0.5x avg = Narrow Range Body
+COG_THRESHOLD: float = 0.25      # close in top/bottom 25% of range
+
+# Sweet/Sour spot (Ch. 12)
+SOUR_SPOT_SR_PROXIMITY_ATR: float = 1.5
+
+# PBS/PSS minimum criteria (Ch. 6, 10, 12)
+PBS_MIN_CRITERIA: int = 5         # minimum 5/7 criteria for tradeable setup
+
+# ═════════════════════════════════════════════════════════════════════════════
 #  CONFIDENCE SCORING  (weights must sum to 100)
+#  Reweighted for Pristine Method: price action > indicators
 # ═════════════════════════════════════════════════════════════════════════════
 CONFIDENCE_WEIGHTS = {
-    "multi_tf_alignment":  20,
-    "indicator_confluence": 20,
-    "sr_level_quality":    15,
-    "price_action_signal": 15,
-    "volume_confirmation": 10,
-    "smart_money_pattern": 10,
-    "market_session":       5,
-    "spread_quality":       5,
+    "stage_alignment":        20,  # Ch. 1  — THE primary gate
+    "pivot_trend_quality":    15,  # Ch. 10 — pivot sequence health
+    "sweet_spot_score":       15,  # Ch. 12 — multi-TF alignment quality
+    "sr_level_quality":       15,  # Ch. 3  — objective S/R proximity
+    "retracement_quality":    10,  # Ch. 6  — pullback depth & location
+    "candle_signal_quality":  10,  # Ch. 2  — WRB/COG/Tail interpretation
+    "volume_classification":   5,  # Ch. 5  — professional vs novice
+    "indicator_confirmation":  5,  # Ch. 4,16 — demoted to minor aid
+    "spread_quality":          5,  # practical execution concern
 }
 assert sum(CONFIDENCE_WEIGHTS.values()) == 100, \
     f"CONFIDENCE_WEIGHTS must sum to 100, got {sum(CONFIDENCE_WEIGHTS.values())}"
@@ -169,6 +203,11 @@ TRAILING_STOP_DISTANCE_ATR: float = 1.0   # trail at 1 ATR
 PARTIAL_TP_RATIO: float = 0.5             # close 50% at first target
 PARTIAL_TP_RR: float = 2.0               # first target at 1:2
 
+# ── Pristine Position Management (Ch. 7, 12, 13) ─────────────────────────
+MACRO_REFRESH_SECONDS: int = 1800         # refresh D1 macro context every 30 min
+MACRO_SR_PARTIAL_ATR: float = 1.5         # partial close within 1.5 ATR of D1 S/R
+STRUCTURE_SL_BUFFER_ATR: float = 0.2      # buffer beyond pivot for structural stop
+
 # ═════════════════════════════════════════════════════════════════════════════
 #  KELLY CRITERION
 # ═════════════════════════════════════════════════════════════════════════════
@@ -180,7 +219,8 @@ KELLY_DEFAULT_WIN_LOSS_RATIO: float = 2.0
 #  SCANNER
 # ═════════════════════════════════════════════════════════════════════════════
 SCAN_INTERVAL_SECONDS: int = 60           # full universe scan cycle
-POSITION_CHECK_SECONDS: int = 10          # open position monitoring
+POSITION_CHECK_SECONDS: int = 10          # open position monitoring (halted mode)
+TICK_CHECK_SECONDS: int = 5               # fast tick surveillance between full cycles
 DAILY_SUMMARY_HOUR_UTC: int = 21          # send daily summary at 21:00 UTC
 
 # Asset classes to scan (Oanda symbol groups — matched to actual names)

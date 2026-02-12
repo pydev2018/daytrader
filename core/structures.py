@@ -4,6 +4,12 @@
 ===============================================================================
   The book teaches that price is drawn like a magnet to areas of heavy
   order accumulation.  This module identifies those zones algorithmically.
+
+  Pristine Method additions (Ch. 3):
+    - Pivot-based S/R: levels derived from actual prior pivot highs/lows
+    - Major vs Minor S/R classification
+    - Multi-timeframe S/R aggregation
+    - Price void detection
 ===============================================================================
 """
 
@@ -281,3 +287,125 @@ def classify_structure(df: pd.DataFrame, lookback: int = 5) -> str:
     if lh and ll:
         return "downtrend"
     return "range"
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  MULTI-TIMEFRAME S/R AGGREGATION  (Ch. 3 — Pristine Method)
+# ═════════════════════════════════════════════════════════════════════════════
+
+# Higher-TF levels are inherently stronger
+_TF_WEIGHT = {
+    "W1": 5, "D1": 4, "H4": 3, "H1": 2, "M15": 1, "M5": 1,
+}
+
+
+def aggregate_multi_tf_sr(
+    tf_levels: dict[str, list[dict]],
+    current_price: float,
+    cluster_pct: float = 0.3,
+) -> list[dict]:
+    """
+    Combine S/R levels from multiple timeframes into a unified list (Ch. 3).
+
+    The Pristine Method teaches that "the most powerful S/R levels are
+    visible across multiple timeframes."  When D1, H4, and H1 all show
+    a pivot at roughly the same price, that's a Major level.
+
+    Algorithm:
+        1. Collect all levels, tagging each with its source TF.
+        2. Cluster nearby levels (within cluster_pct %).
+        3. Multi-TF clusters get boosted strength.
+        4. Tag each final level as "major" or "minor".
+
+    Returns sorted by strength descending.
+    """
+    all_levels: list[dict] = []
+
+    for tf, levels in tf_levels.items():
+        weight = _TF_WEIGHT.get(tf, 1)
+        for lvl in levels:
+            all_levels.append({
+                **lvl,
+                "_tf": tf,
+                "_weight": weight,
+            })
+
+    if not all_levels:
+        return []
+
+    # Sort by price
+    all_levels.sort(key=lambda x: x.get("price", 0))
+
+    # Cluster nearby levels
+    clusters: list[list[dict]] = []
+    used = set()
+
+    for i, lvl_i in enumerate(all_levels):
+        if i in used:
+            continue
+        cluster = [lvl_i]
+        used.add(i)
+        p_i = lvl_i.get("price", 0)
+        if p_i == 0:
+            continue
+
+        for j in range(i + 1, len(all_levels)):
+            if j in used:
+                continue
+            p_j = all_levels[j].get("price", 0)
+            if p_j > 0 and abs(p_j - p_i) / p_i * 100 <= cluster_pct:
+                cluster.append(all_levels[j])
+                used.add(j)
+
+        clusters.append(cluster)
+
+    # Build unified levels from clusters
+    unified: list[dict] = []
+
+    for cluster in clusters:
+        # Weighted average price
+        total_w = sum(l["_weight"] for l in cluster)
+        avg_price = sum(l.get("price", 0) * l["_weight"] for l in cluster) / total_w
+
+        # Determine kind
+        kinds = set(l.get("kind", "S") for l in cluster)
+        if "S" in kinds and "R" in kinds:
+            kind = "SR"
+        elif "R" in kinds:
+            kind = "R"
+        else:
+            kind = "S"
+
+        # Timeframes that contributed
+        contributing_tfs = list(set(l["_tf"] for l in cluster))
+        max_tf_weight = max(l["_weight"] for l in cluster)
+
+        # Strength: base from touches + TF weight boost + multi-TF bonus
+        base_touches = sum(l.get("touches", 1) for l in cluster)
+        multi_tf_bonus = 0.15 * (len(contributing_tfs) - 1)
+
+        raw_strength = (
+            min(base_touches / 10, 0.5)       # touches: up to 0.5
+            + max_tf_weight * 0.08             # TF weight: up to 0.4
+            + multi_tf_bonus                   # multi-TF: up to 0.45
+        )
+
+        # Major if: from D1/W1 OR multi-TF cluster (3+ TFs)
+        major = max_tf_weight >= 4 or len(contributing_tfs) >= 3
+
+        # Recency from the most recent contributing level
+        best_recency = max(l.get("recency", 0) for l in cluster)
+
+        unified.append({
+            "price": round(avg_price, 6),
+            "kind": kind,
+            "strength": round(min(raw_strength, 1.0), 3),
+            "touches": base_touches,
+            "major": major,
+            "contributing_tfs": contributing_tfs,
+            "recency": best_recency,
+        })
+
+    # Sort by strength descending
+    unified.sort(key=lambda x: x["strength"], reverse=True)
+    return unified

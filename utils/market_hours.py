@@ -6,8 +6,14 @@
 
 from datetime import datetime, timezone
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 import config as cfg
+
+# New York timezone — the industry-standard reference for forex market
+# open/close (Sunday 17:00 ET → Friday 17:00 ET).  Using zoneinfo
+# automatically handles US DST transitions.
+_NY_TZ = ZoneInfo("America/New_York")
 
 
 def utcnow() -> datetime:
@@ -36,23 +42,65 @@ def active_sessions(now: Optional[datetime] = None) -> list[str]:
 
 def is_market_open(now: Optional[datetime] = None) -> bool:
     """
-    Forex markets are open Sunday ~21:00 UTC → Friday ~21:00 UTC.
-    Using 21:00 UTC as both open and close (winter time).
-    In summer (DST) it shifts to 20:00 open / 21:00 close, but we
-    use the conservative 21:00 boundary for both seasons.
+    Forex markets are open Sunday 17:00 ET → Friday 17:00 ET.
+
+    Using New York time (America/New_York) as the reference clock,
+    which automatically handles US DST transitions.  This eliminates
+    the previous bug where hardcoded UTC hours were wrong for ~7 months
+    of the year (March–November).
     """
     now = now or utcnow()
-    wd = now.weekday()  # Mon=0 … Sun=6
-    hour = now.hour
+    # Convert to New York time for the canonical open/close check
+    ny = now.astimezone(_NY_TZ)
+    wd = ny.weekday()  # Mon=0 … Sun=6
+    hour = ny.hour
 
-    if wd == 6 and hour >= 21:    # Sunday after 21:00 UTC
+    # Sunday 17:00 ET → market opens
+    if wd == 6 and hour >= 17:
         return True
-    if wd == 4 and hour >= 21:    # Friday after 21:00 UTC — FIXED (was 22)
+    # Friday 17:00 ET → market closes
+    if wd == 4 and hour >= 17:
         return False
-    if wd == 5:                    # Saturday
+    # Saturday — always closed
+    if wd == 5:
         return False
-    if wd == 6 and hour < 21:     # Sunday before 21:00 UTC
+    # Sunday before 17:00 ET — still closed
+    if wd == 6 and hour < 17:
         return False
+    # Mon–Thu, or Friday before 17:00 — open
+    return True
+
+
+def is_new_trade_allowed(now: Optional[datetime] = None) -> bool:
+    """
+    Whether we should open NEW trades right now.
+
+    Separate from is_market_open() because we stop opening new trades
+    well before the market actually closes:
+
+      - Friday after 12:00 ET (noon NY) → NO new trades.
+        Reason: the London/NY overlap ends, liquidity drops, and
+        any H1-based Pristine entry needs 4-8+ hours to reach TP.
+        A trade opened Friday afternoon will be force-closed by
+        weekend protection before it can play out — a guaranteed
+        forced exit at worse execution.
+
+      - Market closed → obviously no new trades.
+
+    Existing positions continue to be MANAGED (trail, partial, breakeven)
+    through Friday close.  The weekend emergency close at ~16:30 ET is
+    the absolute last resort for positions that survived the afternoon.
+    """
+    if not is_market_open(now):
+        return False
+
+    now = now or utcnow()
+    ny = now.astimezone(_NY_TZ)
+
+    # Friday after noon ET → wind-down, no new entries
+    if ny.weekday() == 4 and ny.hour >= 12:
+        return False
+
     return True
 
 

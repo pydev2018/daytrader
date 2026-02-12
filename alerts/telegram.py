@@ -9,49 +9,90 @@
 ===============================================================================
 """
 
-import logging
+import time
+from concurrent.futures import ThreadPoolExecutor
+
 import requests
 
-logger = logging.getLogger("telegram")
+from utils.logger import get_logger
+
+logger = get_logger("telegram")
 
 
 class TelegramAlerter:
-    """Non-blocking Telegram notifications via HTTP. Fails silently if not configured."""
+    """Non-blocking Telegram notifications via HTTP.
+
+    Sends are dispatched to a single background thread so they never stall
+    the main trading loop (even if Telegram is slow or unreachable).
+    """
+
+    # Minimum interval between consecutive sends (rate-limit guard)
+    _MIN_SEND_INTERVAL = 0.5  # seconds
 
     def __init__(self, bot_token: str = "", chat_id: str = ""):
-        self.bot_token = bot_token
         self.chat_id = chat_id
         self.enabled = bool(bot_token and chat_id)
 
         if self.enabled:
             self._url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-            logger.info("Telegram alerts enabled (HTTP API)")
+            # Connection-pooling session (reuses TCP/TLS)
+            self._session = requests.Session()
+            # Single-thread executor — serialises sends, never blocks main loop
+            self._executor = ThreadPoolExecutor(
+                max_workers=1, thread_name_prefix="telegram"
+            )
+            logger.info("Telegram alerts enabled (non-blocking, HTTP API)")
         else:
             self._url = ""
+            self._session = None
+            self._executor = None
             logger.info("Telegram alerts disabled (no token/chat_id)")
 
+        self._last_send_time: float = 0.0
+
     # =========================================================================
-    # INTERNAL SEND
+    # INTERNAL SEND (runs on background thread)
     # =========================================================================
 
     def _send(self, text: str):
-        """Send a message via Telegram Bot HTTP API. Simple, no async."""
-        if not self.enabled:
+        """Queue a message for async delivery. Never blocks the caller."""
+        if not self.enabled or self._executor is None:
             return
-        try:
-            resp = requests.post(
-                self._url,
-                json={
-                    "chat_id": self.chat_id,
-                    "text": text,
-                    "parse_mode": "HTML",
-                },
-                timeout=10,
-            )
-            if not resp.ok:
-                logger.warning(f"Telegram send failed: {resp.status_code} {resp.text[:200]}")
-        except Exception as e:
-            logger.warning(f"Telegram send failed: {e}")
+        self._executor.submit(self._do_send, text)
+
+    def _do_send(self, text: str, retries: int = 1):
+        """Actual HTTP send — runs on the background thread."""
+        # Rate-limit: wait if we sent too recently
+        elapsed = time.monotonic() - self._last_send_time
+        if elapsed < self._MIN_SEND_INTERVAL:
+            time.sleep(self._MIN_SEND_INTERVAL - elapsed)
+
+        for attempt in range(1 + retries):
+            try:
+                resp = self._session.post(
+                    self._url,
+                    json={
+                        "chat_id": self.chat_id,
+                        "text": text,
+                        "parse_mode": "HTML",
+                    },
+                    timeout=(5, 10),  # (connect, read) — explicit tuple
+                )
+                self._last_send_time = time.monotonic()
+                if resp.ok:
+                    return
+                if resp.status_code == 429:
+                    retry_after = int(resp.headers.get("Retry-After", 5))
+                    logger.warning(f"Telegram rate-limited, waiting {retry_after}s")
+                    time.sleep(retry_after)
+                    continue
+                logger.warning(
+                    f"Telegram send failed: {resp.status_code} {resp.text[:200]}"
+                )
+            except Exception as e:
+                logger.warning(f"Telegram send failed: {e}")
+                if attempt < retries:
+                    time.sleep(2)
 
     # =========================================================================
     # ALERT TYPES
