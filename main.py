@@ -31,8 +31,9 @@ from datetime import datetime, timezone
 import config as cfg
 from core.mt5_connector import MT5Connector
 from core.market_scanner import MarketScanner
-from core.signals import TradeSignal, confidence_to_win_probability
+from core.signals import TradeSignal
 from core import ai_analyst
+from core import chart_analyst
 from execution.trade_executor import TradeExecutor
 from execution.position_monitor import PositionMonitor
 from risk.risk_manager import RiskManager
@@ -207,19 +208,28 @@ class WolfEngine:
                     self._inter_cycle_surveillance(remaining)
                     continue
 
-                # ── Full scan ────────────────────────────────────────────
-                signals = self.scanner.full_scan()
+                # ── Full scan → populates watchlist ──────────────────────
+                # All qualifying setups (score ≥ WATCHLIST_SETUP_THRESHOLD)
+                # go to the watchlist.  No signals are returned here.
+                # Signals come from trigger detection in the surveillance loop.
+                self.scanner.full_scan()
 
-                # ── Process signals ──────────────────────────────────────
-                if signals and not self.scan_only:
-                    self._process_signals(signals)
-                elif signals and self.scan_only:
-                    log.info(f"[SCAN ONLY] {len(signals)} signals found (not executing)")
-                    for sig in signals[:3]:
+                # ── Scan-only: show watchlist status ──────────────────────
+                if self.scan_only:
+                    wl = self.scanner.watchlist
+                    entries = wl.entries_sorted()
+                    if entries:
                         log.info(
-                            f"  → {sig.direction} {sig.symbol} "
-                            f"conf={sig.confidence:.1f} R:R=1:{sig.risk_reward_ratio}"
+                            f"[SCAN ONLY] {len(entries)} symbols on watchlist "
+                            "(not executing, waiting for triggers)"
                         )
+                        for e in entries[:5]:
+                            log.info(
+                                f"  → {e.direction:4s} {e.symbol:12s} "
+                                f"conf={e.confluence_score:5.1f}  "
+                                f"setup={e.setup_score:5.1f}  "
+                                f"checks={e.checks}"
+                            )
 
                 # ── Daily summary ────────────────────────────────────────
                 self._check_daily_summary()
@@ -227,11 +237,11 @@ class WolfEngine:
                 # ── Day/week boundary resets ──────────────────────────────
                 self._check_period_resets()
 
-                # ── Inter-cycle tick surveillance ───────────────────────
-                # Instead of sleeping idle, run fast tick checks every
-                # TICK_CHECK_SECONDS until the next full analysis cycle.
-                # Fast checks use only symbol_info_tick (free, local memory)
-                # and cached thresholds — no bar fetches, no CPU-heavy work.
+                # ── Inter-cycle: position mgmt + watchlist stalking ─────
+                # Between full scans, two activities run concurrently:
+                #   1. Fast tick surveillance on open positions (every 5s)
+                #   2. Watchlist trigger detection on M15 bars (every 15s)
+                # When a trigger fires → chart analysis → execution.
                 elapsed = time.time() - cycle_start
                 remaining = max(1, cfg.SCAN_INTERVAL_SECONDS - elapsed)
                 log.debug(
@@ -246,18 +256,28 @@ class WolfEngine:
 
     def _inter_cycle_surveillance(self, duration_seconds: float):
         """
-        Run fast tick checks for the specified duration, then return.
+        Run fast tick checks AND watchlist trigger detection for the
+        specified duration, then return.
 
-        This fills the gap between full 60s analysis cycles with lightweight
-        tick-level surveillance.  Each check costs only 1 × symbol_info_tick
-        per open position (local memory read — near-zero latency).
+        Two concurrent activities between full scan cycles:
 
-        Catches rapid adverse moves and macro S/R zone entries within
-        TICK_CHECK_SECONDS instead of waiting up to SCAN_INTERVAL_SECONDS.
+        1. Position management (every TICK_CHECK_SECONDS = 5s):
+           Fast tick surveillance on open positions using symbol_info_tick
+           (local memory — near-zero latency).
+
+        2. Watchlist stalking (every WATCHLIST_CHECK_SECONDS = 15s):
+           Check watchlisted symbols for M15 trigger patterns.
+           When a trigger fires → chart analysis (~45-50s) → execute.
+           During chart analysis, position management pauses.  Positions
+           are protected by broker-side SL/TP during this window.
+
+        This is the "stalking screen" — the pro-trader Phase 2/3 behaviour
+        that bridges the gap between setup identification and entry trigger.
         """
         global _shutdown_requested
         end_time = time.time() + duration_seconds
         tick_interval = cfg.TICK_CHECK_SECONDS
+        last_watchlist_check = 0.0
 
         while time.time() < end_time and not _shutdown_requested:
             # Sleep first, then check — gives the market time to move
@@ -273,11 +293,29 @@ class WolfEngine:
             if _shutdown_requested:
                 break
 
-            # Fast tick surveillance on all open positions
+            # ── 1. Fast tick surveillance on open positions ───────────
             try:
                 self.pos_monitor.fast_check_all_positions()
             except Exception as e:
                 log.error(f"Fast tick surveillance error: {e}")
+
+            # ── 2. Watchlist trigger detection (the stalking) ─────────
+            # Only check every WATCHLIST_CHECK_SECONDS (default 15s) to
+            # avoid excessive M15 bar fetches.
+            now = time.time()
+            if (now - last_watchlist_check >= cfg.WATCHLIST_CHECK_SECONDS
+                    and not self.scan_only):
+                last_watchlist_check = now
+                try:
+                    triggered = self.scanner.watchlist_check()
+                    if triggered:
+                        # Process triggered signals: risk check → chart
+                        # analysis (~45-50s) → execution.
+                        # Position management pauses during chart analysis.
+                        # Positions are protected by broker-side SL/TP.
+                        self._process_signals(triggered)
+                except Exception as e:
+                    log.error(f"Watchlist trigger check error: {e}")
 
     def _process_signals(self, signals: list[TradeSignal]):
         """Process and execute qualifying signals."""
@@ -296,45 +334,79 @@ class WolfEngine:
                 log.info(f"{signal.symbol}: blocked — {reason}")
                 continue
 
-            # Informational AI review — logged and alerted, NEVER blocks
-            # The Pristine method is the sole decision-maker.
-            # AI adds a second opinion for the trade journal / Telegram,
-            # but it cannot veto, reject, or weaken a signal.
-            if cfg.OPENAI_API_KEY and signal.confidence >= 85:
-                try:
-                    review = ai_analyst.review_trade(signal.to_dict())
-                    if review:
-                        reasoning = review.get("reasoning", "")
-                        risk_notes = review.get("risk_notes", "")
-                        approved = review.get("approval", True)
-                        adj = review.get("confidence_adjustment", 0)
+            # ── GPT-5.2 Visual Chart Analysis (two-tier) ─────────────────
+            # Tier 1: Render M15/H1/H4/D1 charts, send to GPT for unbiased
+            #         visual technical analysis (GPT doesn't know our direction).
+            # Tier 2: Compare the visual report against our signal to assess
+            #         alignment and produce a risk_factor (0.5-1.0).
+            # The risk_factor scales position size — AI adjusts risk, not decisions.
+            # If chart analysis fails, trade proceeds with tier-based risk only.
+            score_breakdown = {}
+            sa = self.scanner.get_analysis(signal.symbol)
+            if sa:
+                score_breakdown = getattr(sa, "score_breakdown", {})
 
-                        log.info(
-                            f"AI review for {signal.symbol} (INFO ONLY): "
-                            f"opinion={approved} adj={adj:+d} — {reasoning}"
-                        )
-                        signal.rationale.append(
-                            f"AI opinion: {'favourable' if approved else 'cautious'} "
-                            f"({reasoning})"
-                        )
-                        if risk_notes:
-                            signal.rationale.append(f"AI risk note: {risk_notes}")
+            try:
+                chart_result = chart_analyst.analyze_signal_charts(
+                    self.mt5, signal.to_dict(), score_breakdown,
+                )
 
-                        # Send to Telegram so you see the AI's opinion
-                        self.alerter.custom(
-                            f"<b>AI REVIEW (info only)</b>\n"
-                            f"{signal.direction} {signal.symbol} "
-                            f"conf={signal.confidence:.0f}\n"
-                            f"Opinion: {'✓ favourable' if approved else '⚠ cautious'}\n"
-                            f"{reasoning}"
-                        )
-                except Exception as e:
-                    log.warning(f"AI review failed (non-blocking): {e}")
+                chart_rf = chart_result.get("risk_factor", 1.0)
+                alignment = chart_result.get("alignment", "unavailable")
+                red_flags = chart_result.get("red_flags", [])
+                supports = chart_result.get("supports", [])
+                elapsed = chart_result.get("elapsed_seconds", 0)
+
+                # Apply chart risk factor to signal's tier-based factor
+                pre_chart_rf = signal.risk_factor
+                signal.risk_factor *= chart_rf
+
+                log.info(
+                    f"{signal.symbol}: chart analysis → "
+                    f"alignment={alignment} chart_rf={chart_rf:.2f} "
+                    f"(tier={pre_chart_rf:.2f} × chart={chart_rf:.2f} "
+                    f"= effective={signal.risk_factor:.2f}) "
+                    f"in {elapsed:.1f}s"
+                )
+
+                # Add to rationale for trade journal
+                signal.rationale.append(
+                    f"Chart analysis: {alignment} "
+                    f"(risk_factor={signal.risk_factor:.2f})"
+                )
+                if red_flags:
+                    for flag in red_flags[:3]:
+                        signal.rationale.append(f"  ⚠ {flag}")
+                if supports:
+                    for sup in supports[:3]:
+                        signal.rationale.append(f"  ✓ {sup}")
+
+                # Send detailed Telegram alert with chart analysis
+                rf_emoji = "✓" if chart_rf >= 0.85 else "⚠" if chart_rf >= 0.65 else "🚨"
+                flags_text = "\n".join(f"⚠ {f}" for f in red_flags[:3]) if red_flags else "None"
+                sups_text = "\n".join(f"✓ {s}" for s in supports[:3]) if supports else "None"
+
+                self.alerter.custom(
+                    f"<b>{rf_emoji} CHART ANALYSIS</b>\n"
+                    f"{signal.direction} {signal.symbol} "
+                    f"conf={signal.confidence:.0f}\n"
+                    f"Alignment: <b>{alignment}</b>\n"
+                    f"Risk factor: {signal.risk_factor:.2f} "
+                    f"(tier={pre_chart_rf:.2f} × chart={chart_rf:.2f})\n\n"
+                    f"<b>Red flags:</b>\n{flags_text}\n\n"
+                    f"<b>Supports:</b>\n{sups_text}"
+                )
+
+            except Exception as e:
+                log.warning(f"{signal.symbol}: chart analysis error (non-blocking): {e}")
 
             # Execute
             result = self.executor.execute_signal(signal)
             if result:
-                log.info(f"Trade executed: {signal.direction} {signal.symbol}")
+                log.info(
+                    f"Trade executed: {signal.direction} {signal.symbol} "
+                    f"risk_factor={signal.risk_factor:.2f}"
+                )
 
                 # Don't open more trades than allowed
                 our_pos = self.mt5.our_positions()

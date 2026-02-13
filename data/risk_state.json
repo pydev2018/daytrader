@@ -1,0 +1,15 @@
+{
+  "daily_pnl": 0.0,
+  "weekly_pnl": 0.0,
+  "trades_today": 0,
+  "wins_today": 0,
+  "day_start": "2026-02-13T00:00:00+00:00",
+  "week_start": "2026-02-09T00:00:00+00:00",
+  "peak_equity": 10294.4,
+  "day_start_balance": 10294.4,
+  "week_start_balance": 10294.4,
+  "halted": false,
+  "halt_reason": "",
+  "symbol_history": {},
+  "saved_at": "2026-02-13T00:00:18.460194+00:00"
+}

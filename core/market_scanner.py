@@ -3,21 +3,28 @@
   Market Scanner — continuously scans the full Oanda universe
 ===============================================================================
   This is the tireless eye that never blinks.  It cycles through every
-  tradeable symbol, runs multi-timeframe analysis, and emits signals
-  for anything that passes the confidence threshold.
+  tradeable symbol, runs multi-timeframe analysis, and populates the
+  watchlist with qualifying setups.
+
+  Architecture (post-watchlist redesign):
+    full_scan()       — scans all symbols, populates/refreshes watchlist
+    watchlist_check() — checks watchlisted symbols for M15 triggers
+    
+  ALL signals must go through the watchlist → trigger route.
+  No signal is ever auto-executed from a scan alone.
 ===============================================================================
 """
 
 from __future__ import annotations
 
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
 
 import config as cfg
 from core.mt5_connector import MT5Connector
 from core.confluence import analyze_symbol, SymbolAnalysis
-from core.signals import generate_signal, TradeSignal
+from core.signals import TradeSignal
+from core.watchlist import Watchlist
 from core import news_aggregator
 from utils.logger import get_logger
 from utils import market_hours
@@ -26,7 +33,7 @@ log = get_logger("scanner")
 
 
 class MarketScanner:
-    """Scans all instruments and produces trade signals."""
+    """Scans all instruments and populates the watchlist with qualifying setups."""
 
     def __init__(self, mt5_conn: MT5Connector):
         self.mt5 = mt5_conn
@@ -35,6 +42,8 @@ class MarketScanner:
         self._scan_count: int = 0
         self._last_event_check: float = 0
         self._active_event_window: dict | None = None
+        # ── The professional stalking screen ──────────────────────────
+        self._watchlist = Watchlist(self.mt5)
 
     def refresh_universe(self):
         """Discover all tradeable symbols from MT5."""
@@ -45,9 +54,17 @@ class MarketScanner:
     def universe(self) -> list[str]:
         return self._universe
 
-    def scan_single(self, symbol: str) -> Optional[TradeSignal]:
+    @property
+    def watchlist(self) -> Watchlist:
+        """Public access to the watchlist for diagnostics and scan-only mode."""
+        return self._watchlist
+
+    def scan_single(self, symbol: str) -> Optional[SymbolAnalysis]:
         """
-        Analyze a single symbol and return a signal if one qualifies.
+        Analyze a single symbol.  Returns SymbolAnalysis or None if filtered.
+
+        NOTE: This no longer generates signals.  The analysis is used to
+        populate the watchlist.  Signals come from watchlist trigger detection.
         """
         try:
             # Quick filters before expensive analysis
@@ -55,8 +72,6 @@ class MarketScanner:
                 return None
 
             # Deterministic high-impact event avoidance (NFP, FOMC, ECB, etc.)
-            # Uses Finnhub economic calendar + hardcoded avoidance windows.
-            # No AI involved — purely rule-based and backtestable.
             event = news_aggregator.is_high_impact_event_window(symbol)
             if event:
                 log.info(
@@ -74,19 +89,21 @@ class MarketScanner:
             sa = analyze_symbol(self.mt5, symbol)
             self._last_scan[symbol] = sa
 
-            # Generate signal if the setup qualifies
-            signal = generate_signal(sa)
-
-            return signal
+            return sa
 
         except Exception as e:
             log.error(f"Error scanning {symbol}: {e}", exc_info=True)
             return None
 
-    def full_scan(self, max_workers: int = 4) -> list[TradeSignal]:
+    def full_scan(self) -> list[TradeSignal]:
         """
-        Scan the entire universe and return all qualifying signals.
-        Uses threading for parallelism since MT5 calls are I/O-bound.
+        Scan the entire universe and populate the watchlist.
+
+        IMPORTANT: Returns an EMPTY list.  All signals come through the
+        watchlist → trigger route via watchlist_check().
+
+        The return type is kept as list[TradeSignal] for backward
+        compatibility with the main loop interface.
         """
         if not self._universe:
             self.refresh_universe()
@@ -95,13 +112,8 @@ class MarketScanner:
             log.info("Market closed — skipping scan")
             return []
 
-        # Check for high-impact event windows (deterministic, no AI)
-        # This is cached per scan cycle — is_high_impact_event_window()
-        # is called per-symbol in scan_single() for currency-specific matching.
-
         self._scan_count += 1
         start_time = time.time()
-        signals: list[TradeSignal] = []
 
         # Filter to symbols in good sessions
         active = market_hours.active_sessions()
@@ -115,20 +127,18 @@ class MarketScanner:
             f"(sessions: {', '.join(active) or 'none'})"
         )
 
-        # Sequential scan to avoid MT5 thread issues
-        # (MT5 Python API is not thread-safe, so we scan sequentially)
+        # Sequential scan (MT5 Python API is not thread-safe)
         for symbol in scannable:
-            signal = self.scan_single(symbol)
-            if signal is not None:
-                signals.append(signal)
+            self.scan_single(symbol)
 
         elapsed = time.time() - start_time
 
-        # Sort by confidence (best first)
-        signals.sort(key=lambda s: s.confidence, reverse=True)
+        # ── Update the watchlist from scan results ────────────────────
+        # This adds qualifying setups, refreshes existing entries, and
+        # removes entries that no longer qualify.
+        self._watchlist.update_from_scan(self._last_scan)
 
-        # ── Scan funnel diagnostic ──────────────────────────────────────
-        # Count how many symbols had a direction vs. scored above various thresholds
+        # ── Scan funnel diagnostic ────────────────────────────────────
         n_with_direction = sum(
             1 for sa in self._last_scan.values()
             if sa.trade_direction is not None
@@ -137,43 +147,38 @@ class MarketScanner:
             1 for sa in self._last_scan.values()
             if sa.confluence_score >= 50
         )
-        n_in_review_band = sum(
-            1 for sa in self._last_scan.values()
-            if cfg.CONFIDENCE_REVIEW_BAND <= sa.confluence_score < cfg.CONFIDENCE_THRESHOLD
-        )
         n_above_threshold = sum(
+            1 for sa in self._last_scan.values()
+            if sa.confluence_score >= cfg.WATCHLIST_SETUP_THRESHOLD
+        )
+        n_above_auto = sum(
             1 for sa in self._last_scan.values()
             if sa.confluence_score >= cfg.CONFIDENCE_THRESHOLD
         )
-        n_review_band_approved = sum(
-            1 for s in signals if s.review_band
-        )
-        n_auto_accepted = len(signals) - n_review_band_approved
 
         log.info(
-            f"Scan #{self._scan_count} complete: "
-            f"{len(signals)} signals from {len(scannable)} symbols "
-            f"in {elapsed:.1f}s  │  "
-            f"funnel: direction={n_with_direction} "
-            f"score>50={n_above_50} "
-            f"review-band({cfg.CONFIDENCE_REVIEW_BAND:.0f}-{cfg.CONFIDENCE_THRESHOLD:.0f})="
-            f"{n_in_review_band}→approved={n_review_band_approved} "
-            f"auto-accept(≥{cfg.CONFIDENCE_THRESHOLD:.0f})={n_above_threshold}"
+            f"Scan #{self._scan_count} complete in {elapsed:.1f}s │ "
+            f"scanned={len(scannable)} dir={n_with_direction} "
+            f">50={n_above_50} "
+            f">={int(cfg.WATCHLIST_SETUP_THRESHOLD)}={n_above_threshold} "
+            f">={int(cfg.CONFIDENCE_THRESHOLD)}={n_above_auto} │ "
+            f"watchlist={self._watchlist.size} symbols"
         )
 
-        if signals:
-            for sig in signals[:5]:  # log top 5
-                band_tag = " [RB]" if sig.review_band else ""
-                log.info(
-                    f"  → {sig.direction:4s} {sig.symbol:12s} "
-                    f"conf={sig.confidence:5.1f}  R:R=1:{sig.risk_reward_ratio:.1f}  "
-                    f"winP={sig.win_probability:.0%}{band_tag}"
-                )
-
-        # Free DataFrame memory after signal generation (can be hundreds of MB)
+        # Free DataFrame memory after scan
         self._gc_scan_cache()
 
-        return signals
+        # ALL signals come through watchlist triggers — return empty
+        return []
+
+    def watchlist_check(self) -> list[TradeSignal]:
+        """
+        Check watchlisted symbols for M15 trigger patterns.
+
+        Called every WATCHLIST_CHECK_SECONDS between full scans.
+        This is Phase 2/3 — the stalking and trigger detection.
+        """
+        return self._watchlist.check_triggers()
 
     def get_analysis(self, symbol: str) -> Optional[SymbolAnalysis]:
         """Return the latest analysis for a symbol (from cache)."""
@@ -197,6 +202,7 @@ class MarketScanner:
                     "symbol": sym,
                     "direction": sa.trade_direction,
                     "score": sa.confluence_score,
+                    "setup_score": sa.setup_score,
                     "bias": sa.overall_bias,
                     "atr": sa.atr,
                     "spread": sa.spread_pips,
