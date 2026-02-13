@@ -177,24 +177,58 @@ CONFIDENCE_WEIGHTS = {
 assert sum(CONFIDENCE_WEIGHTS.values()) == 100, \
     f"CONFIDENCE_WEIGHTS must sum to 100, got {sum(CONFIDENCE_WEIGHTS.values())}"
 CONFIDENCE_THRESHOLD: float = 75.0   # auto-accept: full Pristine alignment
-CONFIDENCE_REVIEW_BAND: float = 65.0 # review band floor: second-layer re-evaluation
+CONFIDENCE_REVIEW_BAND: float = 55.0 # review band floor: second-layer re-evaluation
 
-# ── Review Band: Core Strength Parameters ─────────────────────────────────
-# Trades scoring [REVIEW_BAND, THRESHOLD) are re-evaluated using the three
-# Pristine components that best predict trade success: Stage alignment,
-# Sweet Spot (multi-TF agreement), and Retracement Quality.
-# Peripheral weaknesses (S/R proximity, exact pivots, volume, indicators)
-# are forgiven IF the core is genuinely strong.
-REVIEW_BAND_CORE_MIN: float = 0.80   # average(stage, sweet_spot, retrace) must be ≥ this
+# ── Two-Tier Review Band ──────────────────────────────────────────────────
+#
+# TIER 1: Standard Review (65-74.9)
+#   Score held back by moderate weakness in 1-2 peripherals.
+#   Requires strong core and at least one exceptional anchor.
+#
+# TIER 2: Structural Override (55-64.9)
+#   Score distorted by temporal noise (S/R oscillation, candle timing).
+#   Requires EXCEPTIONAL core (≥0.90 avg) + secondary confirmations.
+#   This catches setups like WHEAT: stage=0.90, sweet=1.00, retrace=1.00
+#   whose total score bounces 58-68 due to S/R proximity noise.
+#
+# Standard Review (65-74.9)
+REVIEW_BAND_CORE_MIN: float = 0.80   # average(stage, sweet_spot, retrace) ≥ this
 REVIEW_BAND_STAGE_MIN: float = 0.50  # macro trend must not be hostile
 REVIEW_BAND_SWEET_MIN: float = 0.40  # need at least moderate multi-TF agreement
 REVIEW_BAND_ANCHOR_MIN: float = 0.90 # at least one core component must be exceptional
+
+# Structural Override (55-64.9) — much stricter structural requirements
+DEEP_REVIEW_CORE_MIN: float = 0.90   # core avg must be exceptional
+DEEP_REVIEW_STAGE_MIN: float = 0.70  # clear trend required
+DEEP_REVIEW_SWEET_MIN: float = 0.70  # strong multi-TF agreement required
+DEEP_REVIEW_SECONDARY_MIN: int = 2   # need ≥2 of {volume≥0.50, pivot≥0.30, candle≥0.40, ind≥0.50}
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  GPT-5.2 VISUAL CHART ANALYSIS
+# ═════════════════════════════════════════════════════════════════════════════
+CHART_ANALYSIS_ENABLED: bool = True       # set False to skip (saves cost/latency)
 
 # ═════════════════════════════════════════════════════════════════════════════
 #  RISK MANAGEMENT
 # ═════════════════════════════════════════════════════════════════════════════
 MAX_RISK_PER_TRADE_PCT: float = 1.0       # % of trading capital
 MAX_RISK_PER_TRADE_PCT_CAP: float = 2.0   # hard cap even with Kelly
+
+# ── Per-Tier Risk Factors ─────────────────────────────────────────────────
+# Review-band and structural override trades should risk LESS than auto-accept.
+# These multiply MAX_RISK_PER_TRADE_PCT to determine the base risk budget.
+# Chart analysis can further reduce (but never increase) via its own factor.
+#
+# Effective risk = MAX_RISK_PER_TRADE_PCT × tier_factor × chart_factor
+#
+# Examples ($1000 account, 1% base risk = $10):
+#   Auto-accept, charts supportive:     1.0% × 1.0 × 1.0 = 1.00% ($10.00)
+#   Standard review, charts supportive: 1.0% × 0.75 × 1.0 = 0.75% ($7.50)
+#   Structural override, charts ok:     1.0% × 0.50 × 0.85= 0.42% ($4.25)
+#   Structural override, charts warn:   1.0% × 0.50 × 0.50= 0.25% ($2.50)
+RISK_FACTOR_AUTO_ACCEPT: float = 1.0       # full risk budget
+RISK_FACTOR_STANDARD_REVIEW: float = 0.75  # 75% — good core, weak peripherals
+RISK_FACTOR_DEEP_REVIEW: float = 0.50      # 50% — structural override, cautious sizing
 MIN_RISK_REWARD_RATIO: float = 2.0        # don't take below 1:2
 ATR_SL_MULTIPLIER: float = 1.5            # SL = 1.5 * ATR beyond structure
 ATR_TP_MULTIPLIER: float = 3.0            # TP target multiplier
@@ -234,6 +268,24 @@ SCAN_INTERVAL_SECONDS: int = 60           # full universe scan cycle
 POSITION_CHECK_SECONDS: int = 10          # open position monitoring (halted mode)
 TICK_CHECK_SECONDS: int = 5               # fast tick surveillance between full cycles
 DAILY_SUMMARY_HOUR_UTC: int = 21          # send daily summary at 21:00 UTC
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  WATCHLIST — The Professional Stalking Screen
+# ═════════════════════════════════════════════════════════════════════════════
+# ALL signals must go through the watchlist route.  No auto-execution bypasses.
+#
+# Flow:  Full Scan → Watchlist (if score ≥ threshold) → Stalk for M15 trigger
+#        → Trigger fires → Chart Analysis → Risk-adjusted execution
+#
+# This replicates the pro-trader workflow:
+#   Phase 1 (Scan)    — identify high-quality structural setups
+#   Phase 2 (Stalk)   — monitor watchlisted symbols for entry triggers
+#   Phase 3 (Trigger) — specific M15 candle patterns fire entry
+#   Phase 4 (Execute) — chart analysis + risk adjustment + execution
+WATCHLIST_SETUP_THRESHOLD: float = 55.0    # min confluence score to enter watchlist
+WATCHLIST_CHECK_SECONDS: float = 15.0      # trigger check interval (seconds)
+WATCHLIST_MAX_AGE_HOURS: float = 4.0       # expire stale watchlist entries
+WATCHLIST_MAX_ENTRIES: int = 15            # max symbols on watchlist at once
 
 # Asset classes to scan (Oanda symbol groups — matched to actual names)
 # Oanda uses names like EURUSD.sml, XAUUSD.sml, USOIL.sml, US30, DE40, etc.

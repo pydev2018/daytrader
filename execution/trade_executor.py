@@ -79,6 +79,11 @@ class TradeExecutor:
             return None
 
         # ── Step 2: Position sizing ──────────────────────────────────────
+        # Apply the signal's risk_factor (tier-based + chart analysis)
+        # to the risk manager's adjusted risk percentage.
+        base_risk = self.risk.adjusted_risk_pct()
+        effective_risk = base_risk * getattr(signal, "risk_factor", 1.0)
+
         lots = compute_position_size(
             self.mt5,
             symbol,
@@ -87,7 +92,7 @@ class TradeExecutor:
             signal.stop_loss,
             signal.confidence,
             signal.risk_reward_ratio,
-            adjusted_risk_pct=self.risk.adjusted_risk_pct(),
+            adjusted_risk_pct=effective_risk,
         )
         if lots <= 0:
             log.info(f"{symbol}: position size = 0 — skip")

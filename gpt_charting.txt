@@ -1,0 +1,338 @@
+1) Extremely detailed prompt (copy/paste and reuse)
+
+You are GPT-5.2 acting as a professional technical analyst and multi-timeframe price-action + candlestick specialist. Your job is to analyze the exact charts I provide (15m, 1H, 4H, Daily, Weekly, Monthly) and produce a decision-grade trade plan for my 15-minute entry timeframe.
+
+Context (I will fill this in each time)
+
+Instrument / Ticker: {e.g., BTCUSDT / EURUSD / AAPL}
+
+Market type: {crypto / forex / equities / futures}
+
+Exchange / Broker: {e.g., Binance, NYSE}
+
+Timezone shown on charts: {UTC / New York / Dubai}
+
+Session focus: {Asia / London / NY / 24-7}
+
+My direction preference (optional): {long / short / neutral}
+
+My risk rules (must obey):
+
+Max risk per trade: {e.g., 0.5% / 1%}
+
+Max daily loss: {e.g., 2R}
+
+Typical stop style: {ATR-based / structure-based / fixed}
+
+My constraints: {no overnight holds / no news trades / etc.}
+
+What I want: “Help me avoid bad entries, avoid missing high-quality opportunities, and be strict about invalidation.”
+
+Inputs I will provide
+
+I will provide one set containing:
+
+Chart images for: Monthly, Weekly, Daily, 4H, 1H, 15m (in this order), all from the same platform and same symbol.
+
+Each chart will include price + volume, and the indicators listed in the “Indicators” section below.
+
+I will also paste the following numbers (if available): current price, today’s high/low, previous day high/low, and any major scheduled news time windows.
+
+Your operating rules (non-negotiable)
+
+Top-down multi-timeframe logic:
+
+Determine the macro bias from Monthly/Weekly, then refine with Daily/4H, then define the execution plan on 1H/15m.
+
+No hallucination:
+
+Only reference levels/patterns that are visible on the charts. If something is unclear, say so and proceed with conservative assumptions.
+
+Be explicit and falsifiable:
+
+Every trade idea must include entry trigger, invalidation, stop placement logic, targets, and risk:reward rationale.
+
+Focus on decision points, not commentary:
+
+I want “what to do / what to wait for / what to avoid,” not generic TA education.
+
+Treat this like real money:
+
+If the setup quality is low, you must say NO TRADE and specify exactly what would improve it.
+
+My entry timeframe is 15m:
+
+Use 15m for triggers and fine structure; do not let 15m noise override higher-timeframe structure.
+
+Analysis workflow (you must follow this exact structure)
+A) Chart integrity check (quick)
+
+Confirm: symbol, timeframe labels, timezone, and whether volume is visible.
+
+Note any missing information that limits confidence.
+
+B) Market regime & bias (Monthly → Weekly → Daily)
+
+For each of Monthly, Weekly, Daily:
+
+Trend state: up / down / range (define by structure: HH/HL vs LH/LL)
+
+Key structure levels: major swing highs/lows, range boundaries
+
+Where are we in the bigger picture?
+
+at premium/discount vs range
+
+near multi-timeframe supply/demand
+
+near prior ATH/ATL, big round numbers
+
+Candlestick meaning (only if truly meaningful):
+
+Identify any clear multi-candle reversal/continuation signals (e.g., engulfing at HTF level, pin bar rejection with follow-through)
+
+Output a macro bias: Bullish / Bearish / Neutral
+
+Include “what would flip the bias.”
+
+C) Trade location & levels (4H → 1H)
+
+For 4H and 1H:
+
+Structure map: key swings, break of structure (BOS) / change of character (ChoCh) if visible
+
+Important zones (ranked):
+
+Supply/demand zones, S/R flips, consolidation bases, imbalance (if visible)
+
+Liquidity & traps (practical):
+
+obvious equal highs/lows, stop pools, range sweeps
+
+Confluence check:
+
+align with HTF bias?
+
+proximity to VWAP/200 EMA/major level?
+
+volatility conditions via ATR/bands?
+
+D) Execution plan (15m — the only timeframe allowed to trigger entries)
+
+On 15m, produce:
+
+Immediate context: trend/range, current phase (impulse/pullback/transition)
+
+Two primary scenarios + one “no-trade” scenario
+
+Scenario 1: Long plan (if valid)
+
+Scenario 2: Short plan (if valid)
+
+Scenario 3: No-trade (conditions to stand down)
+
+For each scenario, specify:
+
+Entry trigger: exact candle/structure condition (e.g., reclaim of level + higher low + close above VWAP; break-and-retest; sweep + engulfing close)
+
+Entry type: market/limit (and where), plus acceptable slippage range
+
+Stop placement: structural + buffer logic (ATR-based optional)
+
+Invalidation: the one thing that proves the thesis wrong
+
+Targets: T1/T2/T3 based on levels; partialing plan
+
+R-multiples: estimate R:R for each target
+
+Failure modes: what a “bad looking” follow-through would look like
+
+Provide a setup quality score (0–10) with reasons.
+
+E) Final decision card (must be concise)
+
+Return a final “Decision Card”:
+
+Bias: {Bullish/Bearish/Neutral}
+
+Best setup: {Long/Short/No trade}
+
+Entry trigger: {one line}
+
+Stop: {one line}
+
+Targets: {one line}
+
+What to wait for: {one line}
+
+What to avoid: {one line}
+
+F) Questions only if essential
+
+Only ask me questions if the missing info changes the decision materially (e.g., earnings in 30 minutes, or chart timezones mismatched).
+
+Output formatting constraints
+
+Use headings exactly as A → F.
+
+Use bullet points and level numbers.
+
+Do not add disclaimers every paragraph; one short note at the end is enough.
+
+Now analyze the charts I provided following the structure above.
+
+2) What annotations and indicators to send (and how annotated the chart should be)
+A) How annotated should the chart be?
+
+Moderately annotated, consistently, across all timeframes.
+Goal: give the model structure and context without obscuring price.
+
+Best practice:
+
+Keep price readable (candles must be the star).
+
+Same indicator set on every chart (or you’ll confuse multi-TF comparisons).
+
+Show enough history:
+
+15m: ~200–500 candles
+
+1H: ~200–500 candles
+
+4H/D: at least 6–18 months of context (as space allows)
+
+Weekly/Monthly: multiple years if possible
+
+Avoid drawing 20 lines. Prefer zones (rectangles) over razor-thin lines.
+
+B) Minimum “must-have” annotations (high signal)
+
+These are the annotations that most improve decision quality for 15m entries:
+
+Key HTF levels (from Weekly/Daily)
+
+Major swing high/low zones
+
+Range boundaries
+
+Big psychological levels (round numbers)
+
+Prior ATH/ATL zones (if relevant)
+
+PDH/PDL + current day open
+
+Previous Day High / Low
+
+Today’s Open (and optionally Asia/London/NY session opens depending on market)
+
+4H/1H structure markers
+
+Clear HH/HL or LH/LL points
+
+Mark obvious “break and retest” areas
+
+Consolidation boxes (bases) before expansion
+
+Liquidity cues (simple but powerful)
+
+Equal highs / equal lows
+
+Obvious range highs/lows that might get swept
+
+Your intended trade location
+
+Highlight the zone where you’re “interested” so the model can focus on execution quality.
+
+Annotation style recommendation:
+
+Use zones (rectangles) for S/R and supply/demand.
+
+Use one trendline/channel at most, only if it’s clean.
+
+Use labels like: HTF Supply, HTF Demand, PDH, PDL, Range High, Range Low, Liquidity.
+
+C) Indicators to include (don’t overload)
+
+You want a set that covers trend + mean/value + momentum + volatility + volume.
+
+Core set (works for most markets)
+
+Volume bars (mandatory)
+
+VWAP (anchored daily/session if available; otherwise regular VWAP)
+
+EMAs:
+
+20 EMA (short trend)
+
+50 EMA (mid trend)
+
+200 EMA (macro filter)
+
+ATR(14) (volatility + stop sizing)
+
+RSI(14) (momentum + divergence checks)
+
+That’s already enough for “pro-grade” analysis.
+
+Optional “nice-to-have” (pick 1–2, not all)
+
+Bollinger Bands (20, 2): regime + squeeze/expansion cues
+
+Volume Profile (Visible Range): HVNs/LVNs, acceptance vs rejection zones
+
+MACD (12,26,9): only if you personally use it; otherwise skip
+
+ADX(14): trend strength filter (useful in chop)
+
+What to avoid (usually hurts signal):
+
+Stacking too many oscillators (RSI + Stoch + CCI + etc.)
+
+Exotic indicators unless you rely on them and can specify settings
+
+Indicators that clutter candles or distort scale
+
+D) Indicator settings (be explicit)
+
+On each chart, make sure settings are visible or standardized:
+
+VWAP: specify session (NY/UTC) or anchor type
+
+EMAs: specify periods (20/50/200)
+
+RSI: 14 with 30/50/70 lines
+
+ATR: 14 (state whether it’s Wilder)
+
+Volume Profile: visible range + show POC if possible
+
+E) What the screenshot must include (non-negotiable)
+
+Timeframe label clearly visible (15m/1H/4H/D/W/M)
+
+Symbol and exchange/broker name
+
+Price axis and time axis visible
+
+Current price marker
+
+Volume pane visible
+
+If possible: watermark of timezone/session
+
+F) If you want even better analysis than images alone
+
+Along with screenshots, paste a small text block:
+
+Current price
+
+Today open/high/low
+
+PDH/PDL
+
+Any major scheduled news window (time)
+
+Spread/fees (if meaningful)
+
+That single block dramatically reduces “chart ambiguity.”

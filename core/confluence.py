@@ -115,6 +115,9 @@ class SymbolAnalysis:
     bbf_signals: list = field(default_factory=list)
     # Score breakdown for review-band re-evaluation (populated by compute_confluence_score)
     score_breakdown: dict = field(default_factory=dict)
+    # Structural-only score (0-70): stage + pivot + sweet + retrace + volume + indicators
+    # Excludes temporal components (S/R proximity, candle signal, spread)
+    setup_score: float = 0.0
 
 
 def analyze_timeframe(
@@ -859,6 +862,20 @@ def compute_confluence_score(sa: SymbolAnalysis) -> float:
         "volume": vol_score,
         "indicators": ind_score,
     }
+
+    # ── Setup score: structural components only (0-70 max) ────────────
+    # Excludes temporal components (S/R proximity, candle, spread) which
+    # fluctuate bar-to-bar.  Used by the Watchlist to gauge underlying
+    # setup quality independent of the current bar's noise.
+    sa.setup_score = round(
+        stage_score * weights.get("stage_alignment", 20)
+        + pivot_score * weights.get("pivot_trend_quality", 15)
+        + sweet_score * weights.get("sweet_spot_score", 15)
+        + ret_score * weights.get("retracement_quality", 10)
+        + vol_score * weights.get("volume_classification", 5)
+        + ind_score * weights.get("indicator_confirmation", 5),
+        2,
+    )
 
     # ── Diagnostic logging — shows exactly where each symbol stands ──────
     # Logged at INFO for the top scorers (>50), DEBUG for the rest.

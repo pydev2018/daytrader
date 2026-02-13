@@ -40,6 +40,7 @@ class TradeSignal:
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     pristine_setup: str = ""    # "PBS A+", "PSS A", etc. or empty
     review_band: bool = False   # True if admitted via review-band re-evaluation
+    risk_factor: float = 1.0   # tier-based risk scaling (0.5-1.0), further reduced by chart analysis
 
     @property
     def risk_pips(self) -> float:
@@ -65,6 +66,7 @@ class TradeSignal:
             "timestamp": self.timestamp.isoformat(),
             "pristine_setup": self.pristine_setup,
             "review_band": self.review_band,
+            "risk_factor": self.risk_factor,
         }
 
 
@@ -73,11 +75,14 @@ def confidence_to_win_probability(confidence: float) -> float:
     Map confidence score (0-100) to estimated win probability.
     This is a conservative mapping — even high confidence doesn't guarantee wins.
 
-    Review-band trades (65-74.9) that pass core-strength re-evaluation get a
-    more conservative probability than auto-accept trades, which naturally
-    flows into smaller Kelly position sizes — the risk machinery self-adjusts.
+    Review-band trades get more conservative probability than auto-accept,
+    which naturally flows into smaller Kelly position sizes — the risk
+    machinery self-adjusts.  Structural override trades (55-65) are sized
+    even more conservatively.
 
-    65  → 0.50  (review-band floor — slight edge, sized small)
+    55  → 0.48  (structural override — smallest viable edge, sized small)
+    60  → 0.49
+    65  → 0.50  (standard review-band)
     70  → 0.52
     75  → 0.55  (auto-accept threshold)
     80  → 0.58
@@ -85,10 +90,15 @@ def confidence_to_win_probability(confidence: float) -> float:
     90  → 0.66
     95+ → 0.70
     """
-    if confidence < 65:
+    if confidence < 55:
         return 0.45
+    if confidence < 65:
+        # Deep review (structural override): 55→0.48, 64.9→0.50
+        # Conservative — acknowledges structural quality but respects uncertainty.
+        # Kelly will size these ~30-40% smaller than auto-accept trades.
+        return 0.48 + (confidence - 55) * 0.002
     if confidence < 75:
-        # Review-band: 65→0.50, 74.9→0.54 (linear ramp, stays below auto-accept)
+        # Standard review: 65→0.50, 74.9→0.54 (linear ramp, stays below auto-accept)
         return 0.50 + (confidence - 65) * 0.004
     if confidence < 80:
         return 0.55 + (confidence - 75) * 0.006
@@ -194,6 +204,13 @@ def generate_signal(sa: SymbolAnalysis) -> Optional[TradeSignal]:
     # ── Create signal ────────────────────────────────────────────────────
     win_prob = confidence_to_win_probability(score)
 
+    # Per-tier risk factor: reviewed trades risk less than auto-accept
+    if review_band_approved:
+        tier_risk_factor = (cfg.RISK_FACTOR_STANDARD_REVIEW if score >= 65
+                            else cfg.RISK_FACTOR_DEEP_REVIEW)
+    else:
+        tier_risk_factor = cfg.RISK_FACTOR_AUTO_ACCEPT
+
     signal = TradeSignal(
         symbol=sa.symbol,
         direction=sa.trade_direction,
@@ -208,6 +225,7 @@ def generate_signal(sa: SymbolAnalysis) -> Optional[TradeSignal]:
         rationale=rationale,
         pristine_setup=pristine_label,
         review_band=review_band_approved,
+        risk_factor=tier_risk_factor,
     )
 
     setup_tag = f"  [{pristine_label}]" if pristine_label else ""
@@ -216,7 +234,8 @@ def generate_signal(sa: SymbolAnalysis) -> Optional[TradeSignal]:
         f"SIGNAL: {signal.direction} {signal.symbol} "
         f"@ {signal.entry_price:.5f}  SL={signal.stop_loss:.5f}  "
         f"TP={signal.take_profit:.5f}  R:R={signal.risk_reward_ratio}  "
-        f"Conf={signal.confidence:.1f}  WinP={signal.win_probability:.2f}"
+        f"Conf={signal.confidence:.1f}  WinP={signal.win_probability:.2f}  "
+        f"RiskF={signal.risk_factor:.2f}"
         f"{setup_tag}{band_tag}"
     )
 
@@ -225,23 +244,27 @@ def generate_signal(sa: SymbolAnalysis) -> Optional[TradeSignal]:
 
 def _passes_review_band(sa: SymbolAnalysis) -> tuple[bool, str]:
     """
-    Second-layer re-evaluation for trades in the review band [65, 75).
+    Two-tier second-layer re-evaluation for trades below auto-accept.
 
-    Philosophy: The overall score was held back by *peripheral* weaknesses
-    (e.g., mediocre S/R proximity, moderate pivot trend, low indicator
-    alignment), but the trade may still have a genuine edge if the three
-    Pristine components that best predict trade success are strong:
+    Some components are STRUCTURAL (reflect underlying setup quality):
+        Stage, Sweet Spot, Retracement, Volume, Pivot Trend, Indicators
+    Some components are TEMPORAL (reflect the current bar/moment):
+        S/R proximity, Candle signal
 
-        1. Stage alignment  — macro trend direction (Ch. 1)
-        2. Sweet spot        — multi-TF agreement    (Ch. 12)
-        3. Retracement       — pullback quality       (Ch. 6)
+    When structural quality is overwhelming, temporal noise in the total
+    score should not prevent trade entry.  The system uses two tiers:
 
-    Criteria (ALL must pass):
-        A) Core strength: average(stage, sweet_spot, retracement) ≥ 0.80
-        B) No hostile macro: stage ≥ 0.50
-        C) Meaningful multi-TF: sweet_spot ≥ 0.40
-        D) At least one exceptional anchor: max(core components) ≥ 0.90
-        E) Not blind on entry: candle signal > 0 (we need *some* trigger)
+    TIER 1 — Standard Review (score 65-74.9):
+        Moderate structural weakness.  Requires core avg ≥ 0.80 with
+        at least one exceptional anchor (≥ 0.90).  Candle requirement
+        is waived when core avg ≥ 0.90 (structural quality compensates).
+
+    TIER 2 — Structural Override (score 55-64.9):
+        Severe temporal noise dragging down a structurally excellent setup.
+        Requires core avg ≥ 0.90, all three core ≥ 0.70 individually, AND
+        ≥ 2 secondary confirmations from {volume, pivot, candle, indicators}.
+        This catches textbook setups like WHEAT (stage=0.90, sweet=1.00,
+        retrace=1.00) whose score bounces 58-68 due to S/R oscillation.
 
     Returns:
         (approved: bool, reason: str)
@@ -250,44 +273,80 @@ def _passes_review_band(sa: SymbolAnalysis) -> tuple[bool, str]:
     if not bd:
         return False, "no score breakdown available"
 
+    score = sa.confluence_score
     stage = bd.get("stage", 0.0)
     sweet = bd.get("sweet_spot", 0.0)
     retrace = bd.get("retracement", 0.0)
     candle = bd.get("candle", 0.0)
+    volume = bd.get("volume", 0.0)
+    pivot = bd.get("pivot", 0.0)
+    indicators = bd.get("indicators", 0.0)
 
     core_avg = (stage + sweet + retrace) / 3.0
     anchor = max(stage, sweet, retrace)
 
-    # ── Criterion A: Core strength ───────────────────────────────────────
-    if core_avg < cfg.REVIEW_BAND_CORE_MIN:
-        return False, (
-            f"core avg {core_avg:.2f} < {cfg.REVIEW_BAND_CORE_MIN} "
-            f"(stage={stage:.2f} sweet={sweet:.2f} retrace={retrace:.2f})"
+    if score >= 65:
+        # ══════════════════════════════════════════════════════════════
+        #  TIER 1: Standard Review (65-74.9)
+        # ══════════════════════════════════════════════════════════════
+        if core_avg < cfg.REVIEW_BAND_CORE_MIN:
+            return False, (
+                f"core avg {core_avg:.2f} < {cfg.REVIEW_BAND_CORE_MIN} "
+                f"(stage={stage:.2f} sweet={sweet:.2f} retrace={retrace:.2f})"
+            )
+        if stage < cfg.REVIEW_BAND_STAGE_MIN:
+            return False, f"stage {stage:.2f} < {cfg.REVIEW_BAND_STAGE_MIN} — macro unclear"
+        if sweet < cfg.REVIEW_BAND_SWEET_MIN:
+            return False, f"sweet {sweet:.2f} < {cfg.REVIEW_BAND_SWEET_MIN} — no MTF alignment"
+        if anchor < cfg.REVIEW_BAND_ANCHOR_MIN:
+            return False, (
+                f"no anchor ≥ {cfg.REVIEW_BAND_ANCHOR_MIN} "
+                f"(best={anchor:.2f} from stage/sweet/retrace)"
+            )
+        # Candle requirement: waived when structural core is exceptional
+        if candle <= 0 and core_avg < 0.90:
+            return False, "candle=0 and core avg < 0.90 — need entry confirmation"
+
+        return True, (
+            f"STANDARD-REVIEW core={core_avg:.2f} "
+            f"(stage={stage:.2f} sweet={sweet:.2f} retrace={retrace:.2f}) "
+            f"anchor={anchor:.2f} candle={candle:.2f}"
         )
 
-    # ── Criterion B: Macro trend not hostile ─────────────────────────────
-    if stage < cfg.REVIEW_BAND_STAGE_MIN:
-        return False, f"stage {stage:.2f} < {cfg.REVIEW_BAND_STAGE_MIN} — macro unclear"
+    else:
+        # ══════════════════════════════════════════════════════════════
+        #  TIER 2: Structural Override (55-64.9)
+        #  Much stricter: core must be exceptional + secondary evidence
+        # ══════════════════════════════════════════════════════════════
+        if core_avg < cfg.DEEP_REVIEW_CORE_MIN:
+            return False, (
+                f"deep: core avg {core_avg:.2f} < {cfg.DEEP_REVIEW_CORE_MIN} "
+                f"(stage={stage:.2f} sweet={sweet:.2f} retrace={retrace:.2f})"
+            )
+        if stage < cfg.DEEP_REVIEW_STAGE_MIN:
+            return False, f"deep: stage {stage:.2f} < {cfg.DEEP_REVIEW_STAGE_MIN}"
+        if sweet < cfg.DEEP_REVIEW_SWEET_MIN:
+            return False, f"deep: sweet {sweet:.2f} < {cfg.DEEP_REVIEW_SWEET_MIN}"
 
-    # ── Criterion C: Multi-TF agreement present ──────────────────────────
-    if sweet < cfg.REVIEW_BAND_SWEET_MIN:
-        return False, f"sweet_spot {sweet:.2f} < {cfg.REVIEW_BAND_SWEET_MIN} — no MTF alignment"
+        # Require secondary confirmations from non-core components
+        secondary_count = sum([
+            volume >= 0.50,
+            pivot >= 0.30,
+            candle >= 0.40,
+            indicators >= 0.50,
+        ])
+        if secondary_count < cfg.DEEP_REVIEW_SECONDARY_MIN:
+            return False, (
+                f"deep: only {secondary_count}/{cfg.DEEP_REVIEW_SECONDARY_MIN} "
+                f"secondary confirms (vol={volume:.2f} piv={pivot:.2f} "
+                f"candle={candle:.2f} ind={indicators:.2f})"
+            )
 
-    # ── Criterion D: At least one exceptional anchor ─────────────────────
-    if anchor < cfg.REVIEW_BAND_ANCHOR_MIN:
-        return False, (
-            f"no anchor ≥ {cfg.REVIEW_BAND_ANCHOR_MIN} "
-            f"(best={anchor:.2f} from stage/sweet/retrace)"
+        return True, (
+            f"STRUCTURAL-OVERRIDE core={core_avg:.2f} "
+            f"(stage={stage:.2f} sweet={sweet:.2f} retrace={retrace:.2f}) "
+            f"secondary={secondary_count}/4"
         )
-
-    # ── Criterion E: Entry confirmation exists ───────────────────────────
-    if candle <= 0:
-        return False, "candle=0 — no entry confirmation on the entry timeframe"
-
-    return True, (
-        f"core={core_avg:.2f} (stage={stage:.2f} sweet={sweet:.2f} "
-        f"retrace={retrace:.2f}) anchor={anchor:.2f} candle={candle:.2f}"
-    )
 
 
 def _detect_pbs_pss(sa: SymbolAnalysis) -> dict | None:
