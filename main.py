@@ -34,6 +34,7 @@ from core.market_scanner import MarketScanner
 from core.signals import TradeSignal
 from core import ai_analyst
 from core import chart_analyst
+from core.sniper.pipeline import SniperPipeline
 from execution.trade_executor import TradeExecutor
 from execution.position_monitor import PositionMonitor
 from risk.risk_manager import RiskManager
@@ -78,6 +79,7 @@ class WolfEngine:
         )
         self.risk_mgr = RiskManager(self.mt5)
         self.scanner = MarketScanner(self.mt5)
+        self.sniper = SniperPipeline(self.mt5) if cfg.SNIPER_MODE else None
         self.executor = TradeExecutor(self.mt5, self.risk_mgr, self.alerter)
         self.pos_monitor = PositionMonitor(
             self.mt5, self.executor, self.risk_mgr, self.alerter
@@ -136,7 +138,10 @@ class WolfEngine:
         )
 
         # ── Discover universe ────────────────────────────────────────────
-        self.scanner.refresh_universe()
+        if cfg.SNIPER_MODE and self.sniper:
+            self.sniper.refresh_universe()
+        else:
+            self.scanner.refresh_universe()
 
         # ── Main loop ────────────────────────────────────────────────────
         try:
@@ -152,6 +157,10 @@ class WolfEngine:
     def _main_loop(self):
         """The beating heart of the system."""
         global _shutdown_requested
+
+        if cfg.SNIPER_MODE:
+            self._main_loop_sniper()
+            return
 
         while not _shutdown_requested:
             try:
@@ -250,6 +259,107 @@ class WolfEngine:
             except Exception as e:
                 log.error(f"Error in main loop cycle: {e}", exc_info=True)
                 time.sleep(10)
+
+    def _main_loop_sniper(self):
+        """
+        Event-driven M15 sniper loop.
+        Triggers on new M15 bars and monitors intrabar for top candidates.
+        """
+        global _shutdown_requested
+
+        last_forming_time = 0
+        last_universe_refresh = 0
+        last_position_check = 0
+
+        while not _shutdown_requested:
+            try:
+                self.mt5.ensure_connected()
+
+                if time.time() - last_universe_refresh > 1800 and self.sniper:
+                    self.sniper.refresh_universe()
+                    last_universe_refresh = time.time()
+
+                # Position management (throttled)
+                if time.time() - last_position_check >= cfg.POSITION_CHECK_SECONDS:
+                    last_position_check = time.time()
+                    prev_tickets = self.pos_monitor.get_open_tickets()
+                    self.pos_monitor.check_all_positions()
+                    self.pos_monitor.handle_closed_positions(prev_tickets)
+                    self.pos_monitor.check_weekend_protection()
+                    self.risk_mgr.periodic_risk_check()
+
+                if self.risk_mgr.is_halted:
+                    time.sleep(cfg.POSITION_CHECK_SECONDS)
+                    continue
+
+                # Bar-close detection using a reference symbol
+                ref_symbol = self.sniper.universe[0] if self.sniper and self.sniper.universe else ""
+                if ref_symbol:
+                    forming_time = self.sniper.get_forming_bar_time(ref_symbol)
+                    if forming_time and forming_time != last_forming_time:
+                        last_forming_time = forming_time
+                        intents = self.sniper.on_bar_close()
+                        self._process_intents(intents)
+
+                # Intrabar monitoring
+                if self.sniper:
+                    intents = self.sniper.intrabar_check()
+                    self._process_intents(intents)
+
+                # Fast tick surveillance for open positions
+                self.pos_monitor.fast_check_all_positions()
+
+                # Daily summary and resets
+                self._check_daily_summary()
+                self._check_period_resets()
+
+                time.sleep(2)
+
+            except Exception as e:
+                log.error(f"Error in sniper loop: {e}", exc_info=True)
+                time.sleep(5)
+
+    def _process_intents(self, intents: list):
+        """Process and execute sniper execution intents."""
+        if not intents:
+            return
+        for intent in intents:
+            if _shutdown_requested:
+                break
+            if self.scan_only:
+                log.info(
+                    f"[SCAN ONLY] {intent.symbol} {intent.direction} "
+                    f"type={intent.entry_type} setup={intent.setup_type}"
+                )
+                continue
+            # Max concurrent positions guard
+            if len(self.mt5.our_positions()) >= cfg.MAX_CONCURRENT_POSITIONS:
+                log.info("Max concurrent positions reached — skipping intents")
+                break
+
+            if not market_hours.is_new_trade_allowed(symbol=intent.symbol):
+                log.info(
+                    f"{intent.symbol}: skipped — new trades not allowed "
+                    f"(Friday wind-down / market closed)"
+                )
+                continue
+
+            allowed, reason = self.risk_mgr.can_open_trade(
+                intent.symbol,
+                direction=intent.direction,
+                current_price=intent.entry_price,
+                atr=intent.atr,
+            )
+            if not allowed:
+                log.info(f"{intent.symbol}: blocked — {reason}")
+                continue
+
+            result = self.executor.execute_intent(intent)
+            if result:
+                log.info(
+                    f"Sniper intent executed: {intent.direction} {intent.symbol} "
+                    f"type={intent.entry_type}"
+                )
 
     def _inter_cycle_surveillance(self, duration_seconds: float):
         """

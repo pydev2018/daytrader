@@ -36,6 +36,12 @@ class TradeSignal:
     risk_reward_ratio: float
     atr: float
     spread_pips: float
+    setup_type: str = ""        # "TPR", "RBH", or legacy
+    entry_type: str = "market"  # market|pending_stop|pending_limit
+    tp1: float = 0.0
+    tp2: float = 0.0
+    trigger_level: float = 0.0
+    expiry_bar: int = 0
     rationale: list[str] = field(default_factory=list)
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     pristine_setup: str = ""    # "PBS A+", "PSS A", etc. or empty
@@ -54,9 +60,15 @@ class TradeSignal:
         return {
             "symbol": self.symbol,
             "direction": self.direction,
+            "setup_type": self.setup_type,
+            "entry_type": self.entry_type,
             "entry_price": self.entry_price,
             "stop_loss": self.stop_loss,
             "take_profit": self.take_profit,
+            "tp1": self.tp1,
+            "tp2": self.tp2,
+            "trigger_level": self.trigger_level,
+            "expiry_bar": self.expiry_bar,
             "confidence": self.confidence,
             "win_probability": self.win_probability,
             "risk_reward_ratio": self.risk_reward_ratio,

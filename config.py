@@ -287,6 +287,175 @@ WATCHLIST_CHECK_SECONDS: float = 15.0      # trigger check interval (seconds)
 WATCHLIST_MAX_AGE_HOURS: float = 4.0       # expire stale watchlist entries
 WATCHLIST_MAX_ENTRIES: int = 15            # max symbols on watchlist at once
 
+# ═════════════════════════════════════════════════════════════════════════════
+#  M15 SNIPER MODE — Event-Driven M15-Only Pipeline
+# ═════════════════════════════════════════════════════════════════════════════
+# When enabled, the system ignores HTF gating and runs a pure M15 sniper stack:
+# fast pass → deep pass (TPR/RBH) → intrabar triggers.
+SNIPER_MODE: bool = os.getenv("SNIPER_MODE", "true").lower() in ("1", "true", "yes")
+
+# Core windows
+SNIPER_FAST_PASS_BARS: int = 96           # M15 bars for fast pass
+SNIPER_CONTEXT_BARS: int = 192            # M15 bars for context & pivots
+SNIPER_MAJOR_LEVEL_BARS: int = 384        # M15 bars for macro levels
+SNIPER_TREND_LOOKBACK_BARS: int = 40      # bars to verify HH/HL or LH/LL
+SNIPER_RANGE_LOOKBACK_BARS: int = 48      # bars to define range
+SNIPER_COMPRESSION_BARS: int = 96         # bars for ATR percentile
+SNIPER_PIVOT_L: int = 2                   # pivot/fractal lookback (L=2 fast)
+
+# Fast pass shortlist & intrabar watch
+SNIPER_SHORTLIST_MAX: int = 20            # deep-pass candidates
+SNIPER_INTRABAR_TOP_N: int = 8            # intrabar monitored symbols
+
+# Regime confidence + hysteresis
+SNIPER_REGIME_MIN_CONF: float = 0.70
+SNIPER_REGIME_MIN_CONF_RELAX: float = 0.55
+SNIPER_REGIME_HYSTERESIS_BARS: int = 3
+SNIPER_COMPRESSION_MAX_PCT: int = 40
+SNIPER_COMPRESSION_RELAX_MAX_PCT: int = 55
+
+# Adaptive gating (relax non-safety gates after quiet periods)
+SNIPER_ADAPTIVE_ENABLED: bool = True
+SNIPER_ADAPTIVE_IDLE_BARS: int = 8
+SNIPER_ADAPTIVE_RELAX_STEP: float = 0.05
+SNIPER_ADAPTIVE_MAX_RELAX: float = 0.20
+
+# Execution style: market_close | market_intrabar | pending | hybrid
+SNIPER_EXECUTION_STYLE: str = os.getenv("SNIPER_EXECUTION_STYLE", "hybrid").lower()
+SNIPER_PENDING_EXPIRY_BARS: int = 6       # expire pending orders after N bars
+
+# Quality gates (M15-only)
+SNIPER_MAX_SPREAD_ATR: float = 0.15       # spread <= 0.15*ATR
+SNIPER_MIN_STOP_ATR: float = 0.6          # minimum stop distance in ATR
+SNIPER_NO_CHASE_ATR: float = 0.8          # entry must be within 0.8*ATR of trigger
+
+# TPR parameters
+TPR_PULLBACK_ATR: float = 0.5
+TPR_INVALIDATION_ATR: float = 0.15
+TPR_SL_BUFFER_ATR: float = 0.2
+TPR_TRIGGER_BODY_ATR: float = 0.4
+TPR_REJECTION_ENABLED: bool = True
+TPR_EXPIRY_BARS: int = 6
+TPR_COOLDOWN_BARS: int = 4
+
+# RBH parameters
+RBH_RANGE_WIDTH_ATR: float = 1.2
+RBH_TOUCH_TOL_ATR: float = 0.25
+RBH_BREAK_BUFFER_ATR: float = 0.1
+RBH_BREAK_BODY_ATR: float = 0.35
+RBH_RETEST_TOL_ATR: float = 0.15
+RBH_RETEST_WINDOW_BARS: int = 8
+RBH_SL_BUFFER_ATR: float = 0.1
+RBH_COOLDOWN_BARS: int = 6
+
+# ECR parameters (EMA Cycle Reversion)
+ECR_FAST_EMA: int = 5
+ECR_SIGNAL_EMA: int = 13
+ECR_TREND_EMA: int = 50
+ECR_TARGET_EMA: int = 200
+ECR_CROSS_COUNT: int = 3
+ECR_CROSS_WINDOW_BARS: int = 60
+ECR_CROSS_MIN_GAP_BARS: int = 4
+ECR_ENTRY_BODY_ATR: float = 0.40
+ECR_MAX_TARGET_ATR: float = 2.5
+ECR_MAX_EMA50_SLOPE_ATR: float = 0.20
+ECR_MAX_SPREAD_ATR: float = 0.12
+ECR_STOP_LOOKBACK: int = 12
+ECR_SL_BUFFER_ATR: float = 0.2
+ECR_MIN_SCORE: float = 70.0
+ECR_RISK_FACTOR: float = 0.60
+ECR_SESSION_ONLY: bool = True
+ECR_ALLOWED_SESSIONS: list[str] = ["Tokyo", "Sydney"]
+ECR_TREND_VETO_CONF: float = 0.75
+
+# Asset class detection (for per-asset thresholds)
+SNIPER_METALS_PREFIXES: list[str] = ["XAU", "XAG", "XPT", "XPD"]
+SNIPER_INDEX_KEYWORDS: list[str] = [
+    "US30", "US500", "US100", "NAS100", "UK100",
+    "DE40", "JP225", "FR40", "EU50", "AU200",
+]
+SNIPER_COMMODITY_KEYWORDS: list[str] = [
+    "OIL", "NATGAS", "COPPER", "CORN", "WHEAT", "SUGAR",
+]
+
+# Per-asset-class overrides (only list differences from defaults)
+SNIPER_ASSET_CLASS_OVERRIDES = {
+    "fx": {},
+    "metals": {
+        "min_stop_atr": 0.8,
+        "no_chase_atr": 1.0,
+        "tpr_trigger_body_atr": 0.50,
+        "rbh_break_body_atr": 0.45,
+        "regime_min_conf": 0.75,
+        "compression_max_pct": 35,
+        "ecr_min_score": 75.0,
+        "ecr_max_target_atr": 2.0,
+        "ecr_risk_factor": 0.50,
+    },
+    "indices": {
+        "min_stop_atr": 0.8,
+        "no_chase_atr": 0.95,
+        "tpr_trigger_body_atr": 0.50,
+        "rbh_break_body_atr": 0.45,
+        "compression_max_pct": 35,
+    },
+    "commodities": {
+        "min_stop_atr": 0.9,
+        "no_chase_atr": 1.0,
+        "tpr_trigger_body_atr": 0.55,
+        "rbh_break_body_atr": 0.50,
+        "regime_min_conf": 0.75,
+        "compression_max_pct": 35,
+    },
+    "crypto": {
+        "min_stop_atr": 1.2,
+        "no_chase_atr": 1.2,
+        "max_spread_atr": 0.20,
+        "tpr_rejection_enabled": False,
+        "tpr_trigger_body_atr": 0.60,
+        "rbh_break_body_atr": 0.60,
+        "regime_min_conf": 0.80,
+        "compression_max_pct": 30,
+        "ecr_enabled": False,
+    },
+}
+
+# TP policy
+# structure = swing target + R-multiple, r_multiple = fixed R targets
+SNIPER_TP_POLICY: str = os.getenv("SNIPER_TP_POLICY", "structure").lower()
+SNIPER_TP_R1: float = 1.5
+SNIPER_TP_R2: float = 2.5
+
+# Scoring weights (must sum to 100)
+TPR_SCORE_WEIGHTS = {
+    "structure": 25,
+    "ema": 20,
+    "pullback": 20,
+    "spread": 15,
+    "momentum": 20,
+}
+RBH_SCORE_WEIGHTS = {
+    "range": 25,
+    "compression": 20,
+    "break": 20,
+    "retest": 20,
+    "spread": 15,
+}
+ECR_SCORE_WEIGHTS = {
+    "cycle": 25,
+    "trend": 20,
+    "ema200": 20,
+    "spread": 15,
+    "momentum": 20,
+}
+assert sum(TPR_SCORE_WEIGHTS.values()) == 100
+assert sum(RBH_SCORE_WEIGHTS.values()) == 100
+assert sum(ECR_SCORE_WEIGHTS.values()) == 100
+
+# Position monitoring (sniper)
+SNIPER_MONITOR_TF: str = "M5"
+SNIPER_MONITOR_LOOKBACK: int = 60
+
 # Asset classes to scan (Oanda symbol groups — matched to actual names)
 # Oanda uses names like EURUSD.sml, XAUUSD.sml, USOIL.sml, US30, DE40, etc.
 SCAN_GROUPS = [
