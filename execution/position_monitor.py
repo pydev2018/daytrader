@@ -934,18 +934,21 @@ class PositionMonitor:
 
     def check_weekend_protection(self):
         """
-        Close all positions before the weekend to avoid gap risk.
+        Close all **non-crypto** positions before the weekend to avoid gap risk.
 
         Triggers on Friday after 16:30 ET (New York time).  This is
         30 minutes before the official forex close at 17:00 ET — enough
         margin for execution while spreads are still reasonable.
 
+        **Crypto positions are exempt** — they trade 24/7 with no
+        weekend gaps, so force-closing them would destroy valid setups.
+
         Uses NY timezone (via market_hours) so it automatically handles
         US DST transitions.
 
-        NOTE: The system already stops opening new trades at Friday
+        NOTE: The system already stops opening new forex trades at Friday
         12:00 ET (via market_hours.is_new_trade_allowed).  This close
-        is the BACKSTOP for positions that survived the afternoon.
+        is the BACKSTOP for forex positions that survived the afternoon.
         """
         now = market_hours.utcnow()
         from zoneinfo import ZoneInfo
@@ -954,11 +957,27 @@ class PositionMonitor:
         if ny.weekday() == 4 and (ny.hour > 16 or (ny.hour == 16 and ny.minute >= 30)):
             positions = self.mt5.our_positions()
             if positions:
-                log.warning(
-                    f"WEEKEND PROTECTION: Closing {len(positions)} positions "
-                    f"before market close (NY time: {ny.strftime('%H:%M')})"
-                )
-                self.emergency_close_all(reason="weekend_protection")
+                # Filter out crypto positions — they stay open over the weekend
+                forex_positions = [
+                    p for p in positions
+                    if not market_hours.is_crypto_symbol(p.get("symbol", ""))
+                ]
+                crypto_count = len(positions) - len(forex_positions)
+
+                if forex_positions:
+                    log.warning(
+                        f"WEEKEND PROTECTION: Closing {len(forex_positions)} "
+                        f"forex/CFD positions before market close "
+                        f"(NY time: {ny.strftime('%H:%M')})"
+                        f"{f' — keeping {crypto_count} crypto positions open' if crypto_count else ''}"
+                    )
+                    for pos in forex_positions:
+                        self.executor.close_position(pos, reason="weekend_protection")
+                elif crypto_count:
+                    log.info(
+                        f"WEEKEND PROTECTION: {crypto_count} crypto positions "
+                        f"remain open (24/7 market, no gap risk)"
+                    )
 
     def emergency_close_all(self, reason: str = "emergency"):
         """Close ALL our open positions immediately."""

@@ -435,11 +435,22 @@ def _pristine_sl_tp(sa: SymbolAnalysis, h1_tfa) -> tuple[float, float]:
         BUY → below the most recent pivot low + buffer
         SELL → above the most recent pivot high + buffer
 
-    TP: Next major S/R level in the trade direction, or prior swing extreme.
+    TP: Pivot-based, but with a MINIMUM R:R guarantee.
+        1. Try the nearest pivot high/low above/below entry.
+        2. If that pivot is too close to give MIN_RISK_REWARD_RATIO, try the
+           next pivot further away.
+        3. If no pivot gives acceptable R:R, use ATR-based TP as floor.
+        4. Multi-TF S/R cap is applied but cannot crush TP below the
+           minimum R:R floor.
+
+    This fixes the "TP 1 pip from entry" problem: when price has rallied
+    close to the nearest pivot, targeting it gives a terrible R:R.
+    A pro trader would look past that pivot to the next target.
     """
     sl = 0.0
     tp = 0.0
     buffer = sa.atr * 0.2  # small buffer beyond the pivot
+    min_rr = cfg.MIN_RISK_REWARD_RATIO
 
     if not h1_tfa or not h1_tfa.pivots:
         return sl, tp
@@ -452,20 +463,39 @@ def _pristine_sl_tp(sa: SymbolAnalysis, h1_tfa) -> tuple[float, float]:
         # SL below the most recent pivot low
         if p_lows:
             sl = p_lows[-1]["price"] - buffer
-        # TP at the NEAREST pivot high above entry (not the most extreme).
-        # Targeting the nearest realistic resistance gives a realistic R:R
-        # and higher TP-hit rate than targeting the most distant pivot.
+
+        # Compute minimum TP distance from R:R requirement
+        risk = abs(sa.entry_price - sl) if sl > 0 else sa.atr
+        min_tp_distance = risk * min_rr
+        atr_tp = sa.entry_price + cfg.ATR_TP_MULTIPLIER * sa.atr
+
+        # Try each pivot high above entry, starting with nearest
         if p_highs:
             above = sorted(
                 [p["price"] for p in p_highs if p["price"] > sa.entry_price]
             )
-            if above:
-                tp = above[0]  # nearest pivot high above entry
+            selected = None
+            for candidate in above:
+                reward = candidate - sa.entry_price
+                if reward >= min_tp_distance:
+                    selected = candidate
+                    break
+            if selected is not None:
+                tp = selected
             else:
-                tp = sa.entry_price + cfg.ATR_TP_MULTIPLIER * sa.atr
+                # No pivot gives acceptable R:R — use ATR-based TP
+                tp = atr_tp
+        else:
+            tp = atr_tp
 
-        # Also check multi-TF S/R: use nearest major resistance as TP
-        # cap (don't push TP *past* a major resistance the price must break)
+        # Ensure TP is at least the minimum R:R floor
+        min_tp_price = sa.entry_price + min_tp_distance
+        if tp < min_tp_price:
+            tp = max(tp, atr_tp, min_tp_price)
+
+        # Multi-TF S/R cap: don't push TP past a major resistance the
+        # price must break — BUT don't let the cap crush TP below the
+        # minimum R:R floor (otherwise we'd get the same problem).
         if sa.multi_tf_sr:
             major_above = sorted(
                 [lvl["price"] for lvl in sa.multi_tf_sr
@@ -474,24 +504,47 @@ def _pristine_sl_tp(sa: SymbolAnalysis, h1_tfa) -> tuple[float, float]:
                  and lvl.get("major")]
             )
             if major_above:
-                tp = min(tp, major_above[0])  # cap at nearest major R
+                capped = major_above[0]
+                # Only apply the cap if the capped TP still gives min R:R
+                if capped - sa.entry_price >= min_tp_distance:
+                    tp = min(tp, capped)
 
     elif sa.trade_direction == "SELL":
         # SL above the most recent pivot high
         if p_highs:
             sl = p_highs[-1]["price"] + buffer
-        # TP at the NEAREST pivot low below entry
+
+        # Compute minimum TP distance from R:R requirement
+        risk = abs(sl - sa.entry_price) if sl > 0 else sa.atr
+        min_tp_distance = risk * min_rr
+        atr_tp = sa.entry_price - cfg.ATR_TP_MULTIPLIER * sa.atr
+
+        # Try each pivot low below entry, starting with nearest
         if p_lows:
             below = sorted(
                 [p["price"] for p in p_lows if p["price"] < sa.entry_price],
                 reverse=True,
             )
-            if below:
-                tp = below[0]  # nearest pivot low below entry
+            selected = None
+            for candidate in below:
+                reward = sa.entry_price - candidate
+                if reward >= min_tp_distance:
+                    selected = candidate
+                    break
+            if selected is not None:
+                tp = selected
             else:
-                tp = sa.entry_price - cfg.ATR_TP_MULTIPLIER * sa.atr
+                # No pivot gives acceptable R:R — use ATR-based TP
+                tp = atr_tp
+        else:
+            tp = atr_tp
 
-        # Cap TP at nearest major support
+        # Ensure TP is at least the minimum R:R floor
+        max_tp_price = sa.entry_price - min_tp_distance
+        if tp > max_tp_price:
+            tp = min(tp, atr_tp, max_tp_price)
+
+        # Multi-TF S/R cap (for SELL, cap is a floor)
         if sa.multi_tf_sr:
             major_below = sorted(
                 [lvl["price"] for lvl in sa.multi_tf_sr
@@ -501,7 +554,10 @@ def _pristine_sl_tp(sa: SymbolAnalysis, h1_tfa) -> tuple[float, float]:
                 reverse=True,
             )
             if major_below:
-                tp = max(tp, major_below[0])  # cap at nearest major S
+                capped = major_below[0]
+                # Only apply the cap if it still gives min R:R
+                if sa.entry_price - capped >= min_tp_distance:
+                    tp = max(tp, capped)
 
     return sl, tp
 

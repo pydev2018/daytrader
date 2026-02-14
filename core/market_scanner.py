@@ -68,7 +68,8 @@ class MarketScanner:
         """
         try:
             # Quick filters before expensive analysis
-            if not market_hours.is_market_open():
+            # Crypto trades 24/7; forex/CFDs need the market to be open
+            if not market_hours.is_market_open(symbol=symbol):
                 return None
 
             # Deterministic high-impact event avoidance (NFP, FOMC, ECB, etc.)
@@ -108,19 +109,20 @@ class MarketScanner:
         if not self._universe:
             self.refresh_universe()
 
-        if not market_hours.is_market_open():
-            log.info("Market closed — skipping scan")
-            return []
-
         self._scan_count += 1
         start_time = time.time()
 
-        # Filter to symbols in good sessions
+        # Filter to symbols in good sessions.
+        # Crypto symbols always pass (24/7 market) even when forex is closed.
         active = market_hours.active_sessions()
         scannable = [
             sym for sym in self._universe
             if market_hours.is_good_session_for_symbol(sym)
         ]
+
+        if not scannable:
+            log.info("No symbols in active sessions — skipping scan")
+            return []
 
         log.info(
             f"Scan #{self._scan_count}: {len(scannable)}/{len(self._universe)} symbols "
