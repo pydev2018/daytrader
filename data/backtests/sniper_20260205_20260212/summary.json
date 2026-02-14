@@ -1,0 +1,26 @@
+{
+  "start": "2026-02-05T00:00:00+00:00",
+  "end": "2026-02-12T00:00:00+00:00",
+  "symbols": 1,
+  "trades": 4,
+  "wins": 1,
+  "losses": 3,
+  "win_rate": 0.25,
+  "net_pnl": 77.46,
+  "gross_profit": 153.76,
+  "gross_loss": 76.3,
+  "profit_factor": 2.0152031454783748,
+  "max_drawdown_pct": 0.7514457698428885,
+  "final_balance": 10077.460000000001,
+  "setup_stats": {
+    "TPR": {
+      "trades": 4,
+      "wins": 1,
+      "losses": 3,
+      "win_rate": 0.25,
+      "net_pnl": 77.46,
+      "profit_factor": 2.0152031454783748
+    }
+  },
+  "rejections": 0
+}

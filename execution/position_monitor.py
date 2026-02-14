@@ -95,7 +95,10 @@ class PositionMonitor:
 
         for pos in positions:
             try:
-                self._manage_position(pos)
+                if cfg.SNIPER_MODE:
+                    self._manage_position_sniper(pos)
+                else:
+                    self._manage_position(pos)
             except Exception as e:
                 log.error(f"Error managing position {pos.get('ticket', '?')}: {e}")
 
@@ -118,7 +121,10 @@ class PositionMonitor:
 
         for pos in positions:
             try:
-                self._fast_tick_check(pos)
+                if cfg.SNIPER_MODE:
+                    self._fast_tick_check_sniper(pos)
+                else:
+                    self._fast_tick_check(pos)
             except Exception as e:
                 log.error(f"Fast tick error #{pos.get('ticket', '?')}: {e}")
 
@@ -849,6 +855,122 @@ class PositionMonitor:
                     return be_sl
 
         return current_sl
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  SNIPER POSITION MANAGEMENT (M15/M5 only)
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _manage_position_sniper(self, pos: dict):
+        """M15 sniper position management using M15/M5 only."""
+        ticket = pos.get("ticket", 0)
+        symbol = pos.get("symbol", "")
+        pos_type = pos.get("type", 0)
+        direction = 1 if pos_type == mt5.ORDER_TYPE_BUY else -1
+        open_price = pos.get("price_open", 0)
+        sl = pos.get("sl", 0)
+        volume = pos.get("volume", 0)
+
+        tick = self.mt5.symbol_tick(symbol)
+        if tick is None:
+            return
+        current_price = tick["bid"] if direction == 1 else tick["ask"]
+
+        # M15 and M5 data
+        m15_df = self.mt5.get_rates(symbol, "M15", count=120)
+        m5_df = self.mt5.get_rates(symbol, cfg.SNIPER_MONITOR_TF, count=cfg.SNIPER_MONITOR_LOOKBACK)
+        if m15_df is None or len(m15_df) < 30:
+            return
+        m15_df = add_atr(m15_df)
+        m15_atr = m15_df["atr"].iloc[-1]
+        if np.isnan(m15_atr) or m15_atr <= 0:
+            return
+        if m5_df is not None and len(m5_df) >= 20:
+            m5_df = add_atr(m5_df)
+            m5_atr = m5_df["atr"].iloc[-1]
+            if np.isnan(m5_atr) or m5_atr <= 0:
+                m5_atr = m15_atr
+        else:
+            m5_atr = m15_atr
+
+        # Context cache for fast tick
+        ctx = self._trade_contexts.get(ticket) or {
+            "ticket": ticket,
+            "symbol": symbol,
+            "direction": direction,
+            "entry_price": open_price,
+            "original_sl": sl,
+            "last_analysis_price": current_price,
+            "cached_atr": m15_atr,
+        }
+        ctx["cached_atr"] = m15_atr
+        ctx["last_analysis_price"] = current_price
+        self._trade_contexts[ticket] = ctx
+
+        # R-multiple
+        risk_distance = abs(open_price - sl) if sl != 0 else m15_atr * cfg.ATR_SL_MULTIPLIER
+        if risk_distance == 0:
+            return
+        current_r = ((current_price - open_price) / risk_distance if direction == 1
+                     else (open_price - current_price) / risk_distance)
+
+        # Partial take-profit at R1
+        if (ticket not in self._partial_closed
+                and current_r >= cfg.SNIPER_TP_R1
+                and volume * 0.5 >= 0.01):
+            close_result = self.executor.close_position(
+                pos, reason="sniper_partial", partial=0.5
+            )
+            if close_result:
+                self._partial_closed.add(ticket)
+
+        # Breakeven at 1R
+        if ticket not in self._breakeven_set and current_r >= 1.0:
+            spread_buffer = 0
+            sym_info = self.mt5.symbol_info(symbol)
+            if sym_info:
+                spread_buffer = sym_info.get("spread", 0) * sym_info.get("point", 0.00001)
+            sl = self._apply_breakeven(pos, direction, open_price, sl, spread_buffer, ticket, symbol)
+
+        # ATR trail using M5 for faster tightening
+        if current_r >= 1.5:
+            trail_dist = m5_atr * 1.0
+            if direction == 1:
+                new_sl = current_price - trail_dist
+                if new_sl > sl and new_sl > open_price:
+                    self.executor.modify_sl_tp(pos, new_sl=new_sl)
+            else:
+                new_sl = current_price + trail_dist
+                if (sl == 0 or new_sl < sl) and new_sl < open_price:
+                    self.executor.modify_sl_tp(pos, new_sl=new_sl)
+
+    def _fast_tick_check_sniper(self, pos: dict):
+        """Lightweight tick-level protection for sniper mode."""
+        ticket = pos.get("ticket", 0)
+        symbol = pos.get("symbol", "")
+        ctx = self._trade_contexts.get(ticket)
+        if not ctx:
+            return
+        direction = ctx.get("direction", 1)
+        cached_atr = ctx.get("cached_atr", 0)
+        if cached_atr <= 0:
+            return
+        tick = self.mt5.symbol_tick(symbol)
+        if tick is None:
+            return
+        current_price = tick["bid"] if direction == 1 else tick["ask"]
+        last_analysis_price = ctx.get("last_analysis_price", current_price)
+
+        # Rapid adverse move protection
+        adverse_move = (last_analysis_price - current_price) if direction == 1 else (current_price - last_analysis_price)
+        if adverse_move > cached_atr * 1.2:
+            current_sl = pos.get("sl", 0)
+            new_sl = self._emergency_tighten(
+                pos, direction, current_price, cached_atr,
+                current_sl, ticket, symbol,
+                f"SNIPER rapid adverse move ({adverse_move / cached_atr:.1f} ATR)"
+            )
+            if new_sl != current_sl:
+                ctx["last_analysis_price"] = current_price
 
     # ═════════════════════════════════════════════════════════════════════════
     #  CLOSED POSITION HANDLING

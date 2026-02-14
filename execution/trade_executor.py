@@ -7,6 +7,8 @@
 from __future__ import annotations
 
 from typing import Optional
+import time
+from datetime import datetime, timezone
 
 import MetaTrader5 as mt5
 
@@ -17,6 +19,7 @@ _SYMBOL_FILL_FOK = 1   # bit 0 — Fill or Kill supported
 _SYMBOL_FILL_IOC = 2   # bit 1 — Immediate or Cancel supported
 from core.mt5_connector import MT5Connector
 from core.signals import TradeSignal
+from core.sniper.state import ExecutionIntent
 from risk.position_sizer import compute_position_size
 from risk.risk_manager import RiskManager
 from alerts.telegram import TelegramAlerter
@@ -62,6 +65,141 @@ class TradeExecutor:
             return self._execute_signal_inner(signal)
         finally:
             self._in_flight.discard(symbol)
+
+    def execute_intent(self, intent: ExecutionIntent) -> Optional[dict]:
+        """
+        Execute an ExecutionIntent from the sniper pipeline.
+        Supports market and pending orders.
+        """
+        symbol = intent.symbol
+        if symbol in self._in_flight:
+            log.info(f"{symbol}: execution already in-flight — skip duplicate")
+            return None
+        self._in_flight.add(symbol)
+        try:
+            if intent.entry_type == "market":
+                risk_distance = abs(intent.entry_price - intent.sl)
+                rr_ratio = abs((intent.tp2 or intent.tp1) - intent.entry_price) / risk_distance if risk_distance > 0 else 0.0
+                signal = TradeSignal(
+                    symbol=intent.symbol,
+                    direction=intent.direction,
+                    entry_price=intent.entry_price,
+                    stop_loss=intent.sl,
+                    take_profit=intent.tp2 or intent.tp1,
+                    tp1=intent.tp1,
+                    tp2=intent.tp2,
+                    trigger_level=intent.trigger_level,
+                    expiry_bar=intent.expiry_bar,
+                    confidence=intent.confidence,
+                    win_probability=0.55,
+                    risk_reward_ratio=round(rr_ratio, 2),
+                    atr=intent.atr,
+                    spread_pips=0.0,
+                    setup_type=intent.setup_type,
+                    entry_type=intent.entry_type,
+                    rationale=intent.reasons,
+                    risk_factor=intent.risk_factor,
+                )
+                return self._execute_signal_inner(signal)
+            return self._place_pending_order(intent)
+        finally:
+            self._in_flight.discard(symbol)
+
+    def _place_pending_order(self, intent: ExecutionIntent) -> Optional[dict]:
+        """
+        Place a pending stop/limit order for sniper setups.
+        """
+        symbol = intent.symbol
+        if not self.mt5.select_symbol(symbol):
+            log.error(f"Cannot select {symbol}")
+            return None
+
+        sym_info = self.mt5.symbol_info(symbol)
+        if sym_info is None:
+            return None
+        digits = sym_info.get("digits", 5)
+
+        price = round(intent.entry_price, digits)
+        sl = round(intent.sl, digits)
+        tp = round(intent.tp2 or intent.tp1, digits)
+
+        # Position sizing based on intended entry/SL
+        risk_distance = abs(price - sl)
+        rr_ratio = abs(tp - price) / risk_distance if risk_distance > 0 else 0.0
+        base_risk = self.risk.adjusted_risk_pct()
+        effective_risk = base_risk * intent.risk_factor
+        lots = compute_position_size(
+            self.mt5,
+            symbol,
+            intent.direction,
+            price,
+            sl,
+            intent.confidence,
+            rr_ratio,
+            adjusted_risk_pct=effective_risk,
+        )
+        if lots <= 0:
+            log.info(f"{symbol}: pending size = 0 — skip")
+            return None
+
+        # Map entry type to MT5 order type
+        if intent.entry_type == "pending_stop":
+            order_type = mt5.ORDER_TYPE_BUY_STOP if intent.direction == "BUY" else mt5.ORDER_TYPE_SELL_STOP
+        else:
+            order_type = mt5.ORDER_TYPE_BUY_LIMIT if intent.direction == "BUY" else mt5.ORDER_TYPE_SELL_LIMIT
+
+        # Expiration time
+        expiry_seconds = intent.expiry_bar * 15 * 60
+        expiration = datetime.fromtimestamp(int(time.time()) + expiry_seconds, tz=timezone.utc)
+
+        # ── Enforce broker stop level ───────────────────────────────────
+        point = sym_info.get("point", 0.00001)
+        min_stop_points = sym_info.get("trade_stops_level", 0)
+        min_distance = min_stop_points * point
+        if min_distance > 0:
+            if intent.direction == "BUY":
+                if price - sl < min_distance:
+                    sl = round(price - min_distance - point, digits)
+                if tp - price < min_distance:
+                    tp = round(price + min_distance + point, digits)
+            else:
+                if sl - price < min_distance:
+                    sl = round(price + min_distance + point, digits)
+                if price - tp < min_distance:
+                    tp = round(price - min_distance - point, digits)
+
+        request = {
+            "action": mt5.TRADE_ACTION_PENDING,
+            "symbol": symbol,
+            "volume": lots,
+            "type": order_type,
+            "price": price,
+            "sl": sl,
+            "tp": tp,
+            "deviation": 20,
+            "magic": cfg.MAGIC_NUMBER,
+            "comment": f"sniper_{intent.setup_type}",
+            "type_time": mt5.ORDER_TIME_SPECIFIED,
+            "expiration": expiration,
+            "type_filling": mt5.ORDER_FILLING_RETURN,
+        }
+
+        # Validate request before sending
+        check = self.mt5.check_order(request)
+        if check is None or check.get("retcode", 0) != 0:
+            log.error(f"{symbol}: pending order check failed — {check}")
+            return None
+
+        result = self.mt5.send_order(request)
+        if result is None or result.get("retcode", 0) != mt5.TRADE_RETCODE_DONE:
+            log.error(f"{symbol}: pending order rejected — {result}")
+            return None
+
+        log.info(
+            f"PENDING ORDER: {intent.direction} {symbol} "
+            f"type={intent.entry_type} price={price} SL={sl} TP={tp}"
+        )
+        return result
 
     def _execute_signal_inner(self, signal: TradeSignal) -> Optional[dict]:
         """Inner execution logic, wrapped by in-flight guard."""
