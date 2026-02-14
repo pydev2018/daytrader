@@ -187,26 +187,23 @@ class WolfEngine:
                     continue
 
                 # ── Market open check ────────────────────────────────────
-                if not market_hours.is_market_open():
-                    if self._cycle_count % 60 == 1:
-                        log.info("Market closed — waiting …")
-                    time.sleep(cfg.SCAN_INTERVAL_SECONDS)
-                    continue
+                # Forex is closed on weekends, but crypto trades 24/7.
+                # If forex is closed, we still run the scan (crypto symbols
+                # pass session filtering) and the surveillance loop.
+                forex_open = market_hours.is_market_open()
+                forex_new_allowed = market_hours.is_new_trade_allowed()
 
-                # ── Friday wind-down check ─────────────────────────────
-                # After Friday 12:00 ET: no new trades.  Existing positions
-                # are still managed by check_all_positions() above.
-                # The weekend emergency close at 16:30 ET is the backstop.
-                if not market_hours.is_new_trade_allowed():
+                if not forex_open:
+                    if self._cycle_count % 60 == 1:
+                        log.info(
+                            "Forex market closed — scanning crypto only"
+                        )
+                elif not forex_new_allowed:
                     if self._cycle_count % 30 == 1:
                         log.info(
-                            "Friday wind-down — no new trades, "
-                            "managing existing positions only"
+                            "Friday wind-down — forex: managing existing "
+                            "positions only, crypto: still scanning for new trades"
                         )
-                    elapsed = time.time() - cycle_start
-                    remaining = max(1, cfg.SCAN_INTERVAL_SECONDS - elapsed)
-                    self._inter_cycle_surveillance(remaining)
-                    continue
 
                 # ── Full scan → populates watchlist ──────────────────────
                 # All qualifying setups (score ≥ WATCHLIST_SETUP_THRESHOLD)
@@ -323,6 +320,15 @@ class WolfEngine:
             if _shutdown_requested:
                 break
 
+            # Per-symbol market hours check — crypto is always allowed,
+            # forex/CFDs are blocked during Friday wind-down & market close
+            if not market_hours.is_new_trade_allowed(symbol=signal.symbol):
+                log.info(
+                    f"{signal.symbol}: skipped — new trades not allowed "
+                    f"(Friday wind-down / market closed)"
+                )
+                continue
+
             # Check risk one more time (with fresh setup parameters)
             allowed, reason = self.risk_mgr.can_open_trade(
                 signal.symbol,
@@ -335,17 +341,24 @@ class WolfEngine:
                 continue
 
             # ── GPT-5.2 Visual Chart Analysis (two-tier) ─────────────────
-            # Tier 1: Render M15/H1/H4/D1 charts, send to GPT for unbiased
-            #         visual technical analysis (GPT doesn't know our direction).
-            # Tier 2: Compare the visual report against our signal to assess
-            #         alignment and produce a risk_factor (0.5-1.0).
-            # The risk_factor scales position size — AI adjusts risk, not decisions.
-            # If chart analysis fails, trade proceeds with tier-based risk only.
+            # Tier 1: Render CLEAN M15/H1/H4/D1 charts, send to GPT for
+            #         unbiased visual analysis (no direction hint, no levels).
+            # Tier 2: Render ANNOTATED charts (Entry/SL/TP drawn), send to
+            #         GPT with the Tier 1 report.  GPT can now see our exact
+            #         levels on the chart and assess geometric validity.
+            #
+            # The risk_factor (0.5–1.0) scales position size.
+            # VETO RULE: For marginal setups (score < 65), if chart analysis
+            #   says "contradictory" with risk_factor < 0.6, we SKIP the trade.
+            #   This is NOT AI vetoing — it's two independent sources (low
+            #   algorithmic score + bad chart geometry) both saying "weak setup."
             score_breakdown = {}
             sa = self.scanner.get_analysis(signal.symbol)
             if sa:
                 score_breakdown = getattr(sa, "score_breakdown", {})
 
+            chart_vetoed = False
+            chart_result = None  # initialized before try for journal access
             try:
                 chart_result = chart_analyst.analyze_signal_charts(
                     self.mt5, signal.to_dict(), score_breakdown,
@@ -356,6 +369,8 @@ class WolfEngine:
                 red_flags = chart_result.get("red_flags", [])
                 supports = chart_result.get("supports", [])
                 elapsed = chart_result.get("elapsed_seconds", 0)
+                sl_assessment = chart_result.get("sl_assessment", "")
+                tp_assessment = chart_result.get("tp_assessment", "")
 
                 # Apply chart risk factor to signal's tier-based factor
                 pre_chart_rf = signal.risk_factor
@@ -368,12 +383,46 @@ class WolfEngine:
                     f"= effective={signal.risk_factor:.2f}) "
                     f"in {elapsed:.1f}s"
                 )
+                if sl_assessment:
+                    log.info(f"{signal.symbol}: SL → {sl_assessment}")
+                if tp_assessment:
+                    log.info(f"{signal.symbol}: TP → {tp_assessment}")
+
+                # ── CHART VETO for marginal setups ───────────────────────
+                # If the algorithmic score is already marginal (< 65) AND
+                # chart analysis independently says "contradictory" with a
+                # low risk factor (< 0.6), the trade thesis is weak from
+                # BOTH sources.  A pro trader would walk away.
+                if (signal.confidence < 65
+                        and alignment == "contradictory"
+                        and chart_rf < 0.6):
+                    chart_vetoed = True
+                    log.warning(
+                        f"{signal.symbol}: CHART VETO — marginal setup "
+                        f"(conf={signal.confidence:.0f} < 65) + contradictory "
+                        f"chart analysis (rf={chart_rf:.2f} < 0.6).  "
+                        f"Skipping trade."
+                    )
+                    self.alerter.custom(
+                        f"<b>🚫 CHART VETO</b>\n"
+                        f"{signal.direction} {signal.symbol} "
+                        f"conf={signal.confidence:.0f}\n"
+                        f"Chart: <b>contradictory</b> (rf={chart_rf:.2f})\n"
+                        f"Reason: low-confidence setup ({signal.confidence:.0f}) "
+                        f"+ charts don't support it\n"
+                        f"SL: {sl_assessment}\n"
+                        f"TP: {tp_assessment}"
+                    )
 
                 # Add to rationale for trade journal
                 signal.rationale.append(
                     f"Chart analysis: {alignment} "
                     f"(risk_factor={signal.risk_factor:.2f})"
                 )
+                if sl_assessment:
+                    signal.rationale.append(f"  SL: {sl_assessment}")
+                if tp_assessment:
+                    signal.rationale.append(f"  TP: {tp_assessment}")
                 if red_flags:
                     for flag in red_flags[:3]:
                         signal.rationale.append(f"  ⚠ {flag}")
@@ -382,23 +431,31 @@ class WolfEngine:
                         signal.rationale.append(f"  ✓ {sup}")
 
                 # Send detailed Telegram alert with chart analysis
-                rf_emoji = "✓" if chart_rf >= 0.85 else "⚠" if chart_rf >= 0.65 else "🚨"
-                flags_text = "\n".join(f"⚠ {f}" for f in red_flags[:3]) if red_flags else "None"
-                sups_text = "\n".join(f"✓ {s}" for s in supports[:3]) if supports else "None"
+                if not chart_vetoed:
+                    rf_emoji = "✓" if chart_rf >= 0.85 else "⚠" if chart_rf >= 0.65 else "🚨"
+                    flags_text = "\n".join(f"⚠ {f}" for f in red_flags[:3]) if red_flags else "None"
+                    sups_text = "\n".join(f"✓ {s}" for s in supports[:3]) if supports else "None"
+                    sl_text = f"\n<b>SL:</b> {sl_assessment}" if sl_assessment else ""
+                    tp_text = f"\n<b>TP:</b> {tp_assessment}" if tp_assessment else ""
 
-                self.alerter.custom(
-                    f"<b>{rf_emoji} CHART ANALYSIS</b>\n"
-                    f"{signal.direction} {signal.symbol} "
-                    f"conf={signal.confidence:.0f}\n"
-                    f"Alignment: <b>{alignment}</b>\n"
-                    f"Risk factor: {signal.risk_factor:.2f} "
-                    f"(tier={pre_chart_rf:.2f} × chart={chart_rf:.2f})\n\n"
-                    f"<b>Red flags:</b>\n{flags_text}\n\n"
-                    f"<b>Supports:</b>\n{sups_text}"
-                )
+                    self.alerter.custom(
+                        f"<b>{rf_emoji} CHART ANALYSIS</b>\n"
+                        f"{signal.direction} {signal.symbol} "
+                        f"conf={signal.confidence:.0f}\n"
+                        f"Alignment: <b>{alignment}</b>\n"
+                        f"Risk factor: {signal.risk_factor:.2f} "
+                        f"(tier={pre_chart_rf:.2f} × chart={chart_rf:.2f})"
+                        f"{sl_text}{tp_text}\n\n"
+                        f"<b>Red flags:</b>\n{flags_text}\n\n"
+                        f"<b>Supports:</b>\n{sups_text}"
+                    )
 
             except Exception as e:
                 log.warning(f"{signal.symbol}: chart analysis error (non-blocking): {e}")
+
+            # ── Skip execution if chart vetoed ────────────────────────────
+            if chart_vetoed:
+                continue
 
             # Execute
             result = self.executor.execute_signal(signal)
@@ -407,6 +464,29 @@ class WolfEngine:
                     f"Trade executed: {signal.direction} {signal.symbol} "
                     f"risk_factor={signal.risk_factor:.2f}"
                 )
+
+                # ── Log chart analysis to trade journal (supplementary record)
+                # This creates a paired CHART_ANALYSIS journal entry so the
+                # full analysis is preserved alongside the OPEN record.
+                try:
+                    chart_journal = {
+                        "action": "CHART_ANALYSIS",
+                        "symbol": signal.symbol,
+                        "direction": signal.direction,
+                        "order_ticket": result.get("order_ticket", 0),
+                        "alignment": chart_result.get("alignment", "unavailable") if chart_result else "unavailable",
+                        "chart_risk_factor": chart_result.get("risk_factor", 1.0) if chart_result else 1.0,
+                        "effective_risk_factor": signal.risk_factor,
+                        "sl_assessment": chart_result.get("sl_assessment", "") if chart_result else "",
+                        "tp_assessment": chart_result.get("tp_assessment", "") if chart_result else "",
+                        "red_flags": chart_result.get("red_flags", []) if chart_result else [],
+                        "supports": chart_result.get("supports", []) if chart_result else [],
+                        "analysis_dir": chart_result.get("analysis_dir", "") if chart_result else "",
+                        "elapsed_seconds": chart_result.get("elapsed_seconds", 0) if chart_result else 0,
+                    }
+                    self.risk_mgr.log_trade(chart_journal)
+                except Exception as e:
+                    log.warning(f"Failed to log chart analysis to journal: {e}")
 
                 # Don't open more trades than allowed
                 our_pos = self.mt5.our_positions()

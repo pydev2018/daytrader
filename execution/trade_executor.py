@@ -265,9 +265,12 @@ class TradeExecutor:
             "confidence": signal.confidence,
             "win_probability": signal.win_probability,
             "risk_reward": signal.risk_reward_ratio,
+            "risk_factor": signal.risk_factor,
             "order_ticket": order_ticket,
             "deal_ticket": deal_ticket,
             "rationale": signal.rationale,
+            "pristine_setup": signal.pristine_setup,
+            "review_band": signal.review_band,
         }
 
         self.risk.log_trade(trade_record)

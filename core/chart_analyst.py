@@ -6,17 +6,24 @@
     Render professional candlestick charts for M15/H1/H4/D1, send to GPT-5.2
     vision for UNBIASED technical analysis.  GPT does NOT know our trade
     direction — it just reports what it sees on the chart.
+    Charts show candlesticks, volume, EMAs, but NO trade levels.
 
-  Tier 2 (Contextual):
-    Compare the unbiased visual analysis against our proposed trade signal.
-    GPT now knows the direction and assesses alignment, red flags, and
-    produces a risk_factor (0.5–1.0) that scales position size.
+  Tier 2 (Contextual — VISUAL):
+    RE-SEND the same charts, now annotated with Entry/SL/TP levels, together
+    with the Tier 1 report and our signal parameters.  GPT can now see
+    exactly where we plan to enter, stop out, and take profit, and assess
+    whether those levels make geometric sense on the chart.
+    Returns: alignment, risk_factor (0.5–1.0), red_flags, supports,
+    and a new sl_tp_assessment section.
 
   Design principles:
-    - AI does NOT veto trades.  It adjusts risk sizing.
-    - Tier 1 is deliberately unbiased (no direction hint).
-    - Tier 2 is a structured risk assessment.
-    - Total latency budget: ~15-25s.  Trade still executes if GPT fails.
+    - Tier 1 is deliberately unbiased (no direction hint, no levels).
+    - Tier 2 is a VISUAL risk assessment — it sees charts WITH our levels.
+    - For marginal setups (score < 65), contradictory chart analysis with
+      risk_factor < 0.6 results in a VETO (implemented in main.py).
+    - For higher-confidence setups, risk_factor scales position size.
+    - Trade still executes if GPT fails (default risk_factor = 1.0).
+    - Total latency budget: ~30-50s (two vision calls + chart rendering).
     - Charts are rendered server-side with matplotlib (no GUI needed).
 ===============================================================================
 """
@@ -26,7 +33,10 @@ from __future__ import annotations
 import base64
 import io
 import json
+import os
 import time
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -37,6 +47,68 @@ from core.mt5_connector import MT5Connector
 from utils.logger import get_logger
 
 log = get_logger("chart_analyst")
+
+# ── Chart/analysis save directory ─────────────────────────────────────────────
+# Structure: logs/chart_analysis/<SYMBOL>/<timestamp>/
+#   clean_M15.png, clean_H1.png, ...      (Tier 1 — unbiased)
+#   annotated_M15.png, annotated_H1.png, ... (Tier 2 — with Entry/SL/TP)
+#   tier1_visual_report.txt                (GPT Tier 1 text)
+#   tier2_risk_assessment.json             (GPT Tier 2 structured output)
+#   signal_data.json                       (our signal parameters)
+ANALYSIS_DIR: Path = cfg.LOG_DIR / "chart_analysis"
+
+
+def _save_charts_to_disk(
+    symbol: str,
+    timestamp_str: str,
+    charts: list[tuple[str, bytes]],
+    prefix: str,
+) -> Path:
+    """
+    Save chart images to disk.  Returns the directory they were saved in.
+    prefix: "clean" for Tier 1 charts, "annotated" for Tier 2 charts.
+    """
+    save_dir = ANALYSIS_DIR / symbol / timestamp_str
+    save_dir.mkdir(parents=True, exist_ok=True)
+    for tf, png_bytes in charts:
+        path = save_dir / f"{prefix}_{tf}.png"
+        path.write_bytes(png_bytes)
+    return save_dir
+
+
+def _save_analysis_to_disk(
+    save_dir: Path,
+    chart_report: Optional[str],
+    assessment: Optional[dict],
+    signal_data: dict,
+    score_breakdown: dict,
+):
+    """
+    Save the GPT analysis text and structured assessment to disk.
+    Everything needed to review the analysis later in one place.
+    """
+    save_dir.mkdir(parents=True, exist_ok=True)
+
+    # Tier 1 visual report (raw GPT output)
+    if chart_report:
+        (save_dir / "tier1_visual_report.txt").write_text(
+            chart_report, encoding="utf-8",
+        )
+
+    # Tier 2 structured assessment (JSON)
+    if assessment:
+        with open(save_dir / "tier2_risk_assessment.json", "w") as f:
+            json.dump(assessment, f, indent=2, default=str)
+
+    # Our signal data (for reproducibility)
+    with open(save_dir / "signal_data.json", "w") as f:
+        combined = {
+            "signal": signal_data,
+            "score_breakdown": score_breakdown,
+            "saved_at": datetime.now(timezone.utc).isoformat(),
+        }
+        json.dump(combined, f, indent=2, default=str)
+
 
 # ── Lazy imports for heavyweight packages ────────────────────────────────────
 _matplotlib_ready = False
@@ -79,18 +151,101 @@ CHART_BARS = {
 }
 
 
+def _draw_trade_levels(ax, n_bars: int, levels: dict):
+    """
+    Draw Entry / SL / TP horizontal lines and risk/reward shaded zones.
+
+    This makes GPT's job dramatically easier: it can see exactly where our
+    stop sits relative to chart structure, whether our TP faces resistance,
+    and whether the entry price is at a meaningful level.
+
+    Colors:
+      Entry  — bright white, solid
+      SL     — red (#FF5252), dashed
+      TP     — cyan (#00E5FF), dashed
+      Risk zone (entry→SL)   — red-tinted transparent fill
+      Reward zone (entry→TP) — green-tinted transparent fill
+    """
+    entry = levels.get("entry", 0)
+    sl = levels.get("sl", 0)
+    tp = levels.get("tp", 0)
+    direction = levels.get("direction", "BUY")
+
+    if entry <= 0:
+        return
+
+    # ── Entry line ────────────────────────────────────────────────────
+    ax.axhline(y=entry, color="#FFFFFF", linestyle="-", linewidth=1.2, alpha=0.9)
+    ax.annotate(
+        f"  ENTRY {entry:.5g}",
+        xy=(n_bars - 1, entry),
+        color="#FFFFFF", fontsize=9, fontweight="bold", va="bottom",
+        bbox=dict(boxstyle="round,pad=0.3", facecolor="#1B5E20",
+                  edgecolor="#4CAF50", alpha=0.9),
+    )
+
+    # ── Stop Loss line ────────────────────────────────────────────────
+    if sl > 0:
+        ax.axhline(y=sl, color="#FF5252", linestyle="--", linewidth=1.4, alpha=0.9)
+        ax.annotate(
+            f"  SL {sl:.5g}",
+            xy=(n_bars - 1, sl),
+            color="#FFFFFF", fontsize=9, fontweight="bold",
+            va="top" if sl < entry else "bottom",
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="#B71C1C",
+                      edgecolor="#FF5252", alpha=0.9),
+        )
+        # Risk zone: entry to SL
+        zone_lo = min(entry, sl)
+        zone_hi = max(entry, sl)
+        ax.axhspan(zone_lo, zone_hi, alpha=0.08, color="#FF5252")
+
+    # ── Take Profit line ──────────────────────────────────────────────
+    if tp > 0:
+        ax.axhline(y=tp, color="#00E5FF", linestyle="--", linewidth=1.4, alpha=0.9)
+        ax.annotate(
+            f"  TP {tp:.5g}",
+            xy=(n_bars - 1, tp),
+            color="#FFFFFF", fontsize=9, fontweight="bold",
+            va="bottom" if tp > entry else "top",
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="#006064",
+                      edgecolor="#00E5FF", alpha=0.9),
+        )
+        # Reward zone: entry to TP
+        zone_lo = min(entry, tp)
+        zone_hi = max(entry, tp)
+        ax.axhspan(zone_lo, zone_hi, alpha=0.06, color="#00E676")
+
+    # ── Direction arrow (small visual hint) ───────────────────────────
+    arrow_y = entry
+    arrow_dy = abs(entry - tp) * 0.15 if tp > 0 else abs(entry - sl) * 0.15
+    if direction == "SELL":
+        arrow_dy = -arrow_dy
+    ax.annotate(
+        "", xy=(n_bars - 3, arrow_y + arrow_dy),
+        xytext=(n_bars - 3, arrow_y),
+        arrowprops=dict(arrowstyle="->", color="#FFFFFF", lw=2),
+    )
+
+
 def render_chart(
     mt5_conn: MT5Connector,
     symbol: str,
     timeframe: str,
     current_price: float = 0.0,
     num_bars: int = 200,
+    trade_levels: Optional[dict] = None,
 ) -> Optional[bytes]:
     """
     Render a professional candlestick chart with volume and EMAs.
 
     Returns PNG image as bytes, or None on failure.
     Chart uses a dark theme similar to TradingView for optimal GPT reading.
+
+    trade_levels (optional):
+        {"entry": float, "sl": float, "tp": float, "direction": str}
+        When provided, horizontal lines and shaded risk/reward zones are
+        drawn so GPT can visually assess the trade geometry.
     """
     if not _ensure_matplotlib():
         return None
@@ -160,6 +315,12 @@ def render_chart(
         ax_price.plot(x, df["ema200"].values, color="#AB47BC", linewidth=1.2,
                       label="EMA 200", alpha=0.8)
 
+    # ── Trade level annotations (Entry / SL / TP) ────────────────────────
+    # Drawn ONLY for Tier 2 annotated charts.  Tier 1 charts are clean
+    # (unbiased — GPT shouldn't know our direction during Tier 1).
+    if trade_levels:
+        _draw_trade_levels(ax_price, n, trade_levels)
+
     # ── Current price line ───────────────────────────────────────────────
     if current_price > 0:
         ax_price.axhline(y=current_price, color="#FFFFFF", linestyle="--",
@@ -186,8 +347,10 @@ def render_chart(
         for spine in ax.spines.values():
             spine.set_color("#363A45")
 
+    # ── Title (include "(ANNOTATED)" when trade levels are shown) ────────
+    title_suffix = "  [ANNOTATED]" if trade_levels else ""
     ax_price.set_title(
-        f"{symbol}  •  {timeframe}",
+        f"{symbol}  •  {timeframe}{title_suffix}",
         color="#D1D4DC", fontsize=14, fontweight="bold", pad=10,
     )
     ax_price.legend(
@@ -238,15 +401,22 @@ def render_all_charts(
     mt5_conn: MT5Connector,
     symbol: str,
     current_price: float = 0.0,
+    trade_levels: Optional[dict] = None,
 ) -> list[tuple[str, bytes]]:
     """
     Render charts for all analysis timeframes.
     Returns list of (timeframe, png_bytes) tuples.
+
+    trade_levels: if provided, Entry/SL/TP are drawn on every chart.
+                  Pass None for clean (Tier 1) charts.
     """
     charts = []
     for tf in CHART_TIMEFRAMES:
         num_bars = CHART_BARS.get(tf, 200)
-        png = render_chart(mt5_conn, symbol, tf, current_price, num_bars)
+        png = render_chart(
+            mt5_conn, symbol, tf, current_price, num_bars,
+            trade_levels=trade_levels,
+        )
         if png:
             charts.append((tf, png))
         else:
@@ -384,17 +554,23 @@ def visual_analysis(
     mt5_conn: MT5Connector,
     symbol: str,
     current_price: float,
-) -> Optional[str]:
+) -> tuple[Optional[str], list[tuple[str, bytes]]]:
     """
-    Tier 1: Send charts to GPT-5.2 for unbiased visual technical analysis.
+    Tier 1: Send CLEAN charts to GPT-5.2 for unbiased visual technical analysis.
 
     GPT does NOT know our trade direction — it produces a neutral report
     of what it sees on the charts: trend, structure, levels, patterns.
+    Charts have NO trade levels annotated (Entry/SL/TP are hidden).
+
+    Returns:
+        (report_text, charts_list) — charts are returned so Tier 2 can
+        re-render annotated versions without re-fetching data.
     """
-    charts = render_all_charts(mt5_conn, symbol, current_price)
+    # Tier 1: clean charts — no trade levels
+    charts = render_all_charts(mt5_conn, symbol, current_price, trade_levels=None)
     if len(charts) < 2:
         log.warning(f"{symbol}: could not render enough charts for analysis")
-        return None
+        return None, charts
 
     tf_list = ", ".join(tf for tf, _ in charts)
     prompt = _VISUAL_PROMPT_TEMPLATE.format(
@@ -405,7 +581,8 @@ def visual_analysis(
     )
 
     images = [png for _, png in charts]
-    return _call_vision(images, _VISUAL_SYSTEM, prompt)
+    report = _call_vision(images, _VISUAL_SYSTEM, prompt)
+    return report, charts
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -413,10 +590,17 @@ def visual_analysis(
 # ═════════════════════════════════════════════════════════════════════════════
 
 _CONTEXT_SYSTEM = """You are a senior risk manager at a quantitative trading desk.
-You compare an independent chart analysis against a proposed trade signal.
-Your job is to assess alignment and identify specific risks.
-Be precise and honest. If the chart supports the trade, say so.
-If there are concerns, specify exactly what they are.
+You are reviewing ANNOTATED charts that show our proposed Entry (white line),
+Stop Loss (red dashed line with red shaded zone), and Take Profit (cyan dashed
+line with green shaded zone).
+You also have an independent chart analysis (from an analyst who did NOT see
+these levels) and our signal parameters.
+Your job is to:
+  1. Assess whether the chart supports or contradicts our trade direction.
+  2. Evaluate whether our SL and TP are well-placed relative to visible
+     chart structure (support/resistance, EMAs, swing points, volume nodes).
+  3. Identify specific risks and confirmations.
+Be precise and honest. Reference what you SEE on the annotated charts.
 Reply with valid JSON only — no markdown, no commentary outside JSON."""
 
 _CONTEXT_PROMPT_TEMPLATE = """Our algorithmic system generated this trade signal:
@@ -440,36 +624,99 @@ Score Breakdown:
   Volume: {volume:.0%}
   Indicators: {ind:.0%}
 
-An independent visual chart analysis (analyst did NOT know our direction) found:
+An independent visual chart analysis (analyst did NOT know our direction or levels) found:
 
 ---
 {chart_report}
 ---
 
-Based on the chart analysis vs our signal:
+The ANNOTATED charts (attached) now show our Entry, SL, and TP levels.
+Look at them carefully. Assess the following:
 
-1. Does the visual analysis SUPPORT or CONTRADICT a {direction} trade?
-2. Are there specific chart patterns or levels that threaten this trade?
-3. What confirms the trade thesis from the charts?
-4. Risk factor: 0.5 to 1.0 (1.0 = charts fully support, 0.5 = significant chart concerns)
+1. DIRECTIONAL ALIGNMENT: Does the multi-TF chart structure SUPPORT or CONTRADICT a {direction} trade?
+2. STOP LOSS ASSESSMENT: Look at where the red SL line sits on the chart.
+   - Is it behind a meaningful structural level (swing low/high, S/R zone, EMA)?
+   - Or is it in "no man's land" where it could easily be swept before the real move?
+   - Would a different SL placement be safer? (just note, don't change our levels)
+3. TAKE PROFIT ASSESSMENT: Look at where the cyan TP line sits.
+   - Does price have a clear path to reach TP, or is there a major S/R zone in the way?
+   - Is the TP realistic given the current market structure?
+4. ENTRY TIMING: Is the entry price at a meaningful location (EMA, S/R, after pullback)?
+5. RISK FACTORS: Any specific threats visible on the charts?
+6. RISK FACTOR: 0.5 to 1.0
+   - 1.0 = charts strongly support the trade, SL/TP are well-placed
+   - 0.85 = generally supportive with minor concerns
+   - 0.7 = some chart concerns or suboptimal level placement
+   - 0.5 = significant structural contradictions or dangerously placed SL/TP
 
 Reply with ONLY this JSON:
-{{"alignment": "supportive|neutral|contradictory", "risk_factor": <float>, "red_flags": ["..."], "supports": ["..."], "reasoning": "<2-3 sentences>"}}"""
+{{
+  "alignment": "supportive|neutral|contradictory",
+  "risk_factor": <float>,
+  "red_flags": ["<specific chart-based concerns>"],
+  "supports": ["<specific chart-based confirmations>"],
+  "sl_assessment": "<1-2 sentences on SL placement quality>",
+  "tp_assessment": "<1-2 sentences on TP placement quality>",
+  "reasoning": "<2-3 sentences overall>"
+}}"""
+
+
+def _parse_assessment_json(text: str) -> Optional[dict]:
+    """Parse the JSON response from Tier 2, handling markdown fences."""
+    try:
+        cleaned = text
+        if "```" in cleaned:
+            parts = cleaned.split("```")
+            for part in parts:
+                stripped = part.strip()
+                if stripped.startswith("json"):
+                    stripped = stripped[4:].strip()
+                if stripped.startswith("{"):
+                    cleaned = stripped
+                    break
+
+        result = json.loads(cleaned)
+
+        # Validate and clamp risk_factor
+        rf = float(result.get("risk_factor", 0.75))
+        result["risk_factor"] = max(0.5, min(1.0, rf))
+
+        # Ensure required fields
+        result.setdefault("alignment", "neutral")
+        result.setdefault("red_flags", [])
+        result.setdefault("supports", [])
+        result.setdefault("reasoning", "")
+        result.setdefault("sl_assessment", "")
+        result.setdefault("tp_assessment", "")
+
+        return result
+    except (json.JSONDecodeError, ValueError, TypeError) as e:
+        log.warning(f"Failed to parse contextual assessment: {e} — text: {text[:300]}")
+        return None
 
 
 def contextual_assessment(
     chart_report: str,
     signal_data: dict,
     score_breakdown: dict,
+    annotated_images: Optional[list[bytes]] = None,
 ) -> Optional[dict]:
     """
-    Tier 2: Compare the unbiased chart analysis against our trade signal.
+    Tier 2: VISUAL contextual risk assessment.
+
+    When annotated_images are provided, GPT sees the charts with Entry/SL/TP
+    drawn on them — enabling it to assess whether our levels make geometric
+    sense relative to chart structure.
+
+    Falls back to text-only analysis if no images are provided.
 
     Returns dict with:
         alignment: "supportive" / "neutral" / "contradictory"
         risk_factor: float 0.5-1.0
         red_flags: list[str]
         supports: list[str]
+        sl_assessment: str
+        tp_assessment: str
         reasoning: str
     """
     bd = score_breakdown or {}
@@ -497,40 +744,24 @@ def contextual_assessment(
         chart_report=chart_report,
     )
 
-    text = _call_text(_CONTEXT_SYSTEM, prompt)
+    # ── Prefer vision call when annotated charts are available ─────────
+    if annotated_images:
+        log.info(
+            f"Tier 2: visual assessment with {len(annotated_images)} "
+            "annotated charts (Entry/SL/TP visible)"
+        )
+        text = _call_vision(
+            annotated_images, _CONTEXT_SYSTEM, prompt,
+            max_tokens=1536,
+        )
+    else:
+        log.info("Tier 2: text-only assessment (no annotated charts)")
+        text = _call_text(_CONTEXT_SYSTEM, prompt)
+
     if text is None:
         return None
 
-    # Parse JSON
-    try:
-        # Strip any markdown code fences
-        cleaned = text
-        if "```" in cleaned:
-            parts = cleaned.split("```")
-            for part in parts:
-                stripped = part.strip()
-                if stripped.startswith("json"):
-                    stripped = stripped[4:].strip()
-                if stripped.startswith("{"):
-                    cleaned = stripped
-                    break
-
-        result = json.loads(cleaned)
-
-        # Validate and clamp risk_factor
-        rf = float(result.get("risk_factor", 0.75))
-        result["risk_factor"] = max(0.5, min(1.0, rf))
-
-        # Ensure required fields
-        result.setdefault("alignment", "neutral")
-        result.setdefault("red_flags", [])
-        result.setdefault("supports", [])
-        result.setdefault("reasoning", "")
-
-        return result
-    except (json.JSONDecodeError, ValueError, TypeError) as e:
-        log.warning(f"Failed to parse contextual assessment: {e} — text: {text[:300]}")
-        return None
+    return _parse_assessment_json(text)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -549,6 +780,13 @@ def analyze_signal_charts(
     Returns a result dict that ALWAYS has a risk_factor (defaults to 1.0
     on any failure, so trades are never blocked by chart analysis issues).
 
+    Pipeline:
+      1. Render CLEAN charts (no trade levels) → Tier 1 vision call
+         (unbiased: GPT doesn't know our direction).
+      2. Render ANNOTATED charts (Entry/SL/TP drawn) → Tier 2 vision call
+         (contextual: GPT sees our exact levels on the chart and assesses
+         whether they make geometric sense relative to chart structure).
+
     Returns:
         {
             "chart_report": str | None,     # Tier 1 visual analysis
@@ -557,6 +795,8 @@ def analyze_signal_charts(
             "red_flags": list[str],
             "supports": list[str],
             "alignment": str,
+            "sl_assessment": str,            # GPT's view on SL placement
+            "tp_assessment": str,            # GPT's view on TP placement
             "elapsed_seconds": float,
         }
     """
@@ -567,6 +807,8 @@ def analyze_signal_charts(
         "red_flags": [],
         "supports": [],
         "alignment": "unavailable",
+        "sl_assessment": "",
+        "tp_assessment": "",
         "elapsed_seconds": 0.0,
     }
 
@@ -581,9 +823,21 @@ def analyze_signal_charts(
     current_price = signal_data.get("entry_price", 0)
     t0 = time.time()
 
-    # ── Tier 1: Visual analysis (unbiased) ───────────────────────────────
-    log.info(f"{symbol}: starting visual chart analysis (Tier 1)...")
-    chart_report = visual_analysis(mt5_conn, symbol, current_price)
+    # Timestamp for file persistence (unique per analysis run)
+    ts_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+
+    # ── Tier 1: Visual analysis (unbiased — clean charts) ────────────────
+    log.info(f"{symbol}: starting visual chart analysis (Tier 1 — clean charts)...")
+    chart_report, clean_charts = visual_analysis(mt5_conn, symbol, current_price)
+
+    # Save clean charts to disk (even if analysis fails, charts are useful)
+    save_dir = None
+    if clean_charts:
+        try:
+            save_dir = _save_charts_to_disk(symbol, ts_str, clean_charts, "clean")
+            log.info(f"{symbol}: saved {len(clean_charts)} clean charts → {save_dir}")
+        except Exception as e:
+            log.warning(f"{symbol}: failed to save clean charts: {e}")
 
     if chart_report is None:
         log.warning(f"{symbol}: visual analysis failed — proceeding with default risk")
@@ -592,11 +846,55 @@ def analyze_signal_charts(
 
     log.info(f"{symbol}: visual analysis complete ({len(chart_report)} chars)")
 
-    # ── Tier 2: Contextual assessment ────────────────────────────────────
-    log.info(f"{symbol}: starting contextual risk assessment (Tier 2)...")
-    assessment = contextual_assessment(chart_report, signal_data, score_breakdown)
+    # ── Render ANNOTATED charts for Tier 2 ───────────────────────────────
+    # These charts have Entry/SL/TP lines and risk/reward shaded zones
+    # drawn on them, so GPT can assess the geometry of our trade levels.
+    trade_levels = {
+        "entry": signal_data.get("entry_price", 0),
+        "sl": signal_data.get("stop_loss", 0),
+        "tp": signal_data.get("take_profit", 0),
+        "direction": signal_data.get("direction", "BUY"),
+    }
+    annotated_charts = render_all_charts(
+        mt5_conn, symbol, current_price, trade_levels=trade_levels,
+    )
+    annotated_images = [png for _, png in annotated_charts] if annotated_charts else None
+
+    # Save annotated charts to disk
+    if annotated_charts and save_dir:
+        try:
+            _save_charts_to_disk(symbol, ts_str, annotated_charts, "annotated")
+            log.info(
+                f"{symbol}: saved {len(annotated_charts)} annotated charts "
+                f"(Entry/SL/TP visible) → {save_dir}"
+            )
+        except Exception as e:
+            log.warning(f"{symbol}: failed to save annotated charts: {e}")
+    elif annotated_images:
+        log.info(
+            f"{symbol}: rendered {len(annotated_images)} annotated charts "
+            f"(Entry/SL/TP visible) for Tier 2"
+        )
+
+    # ── Tier 2: Contextual assessment (VISUAL — annotated charts) ────────
+    log.info(f"{symbol}: starting contextual risk assessment (Tier 2 — annotated charts)...")
+    assessment = contextual_assessment(
+        chart_report, signal_data, score_breakdown,
+        annotated_images=annotated_images,
+    )
 
     elapsed = time.time() - t0
+
+    # ── Save analysis to disk (Tier 1 report + Tier 2 JSON + signal) ─────
+    if save_dir:
+        try:
+            _save_analysis_to_disk(
+                save_dir, chart_report, assessment,
+                signal_data, score_breakdown,
+            )
+            log.info(f"{symbol}: saved analysis text + assessment → {save_dir}")
+        except Exception as e:
+            log.warning(f"{symbol}: failed to save analysis: {e}")
 
     if assessment is None:
         log.warning(f"{symbol}: contextual assessment failed — using default risk")
@@ -607,7 +905,10 @@ def analyze_signal_charts(
             "red_flags": [],
             "supports": [],
             "alignment": "unassessed",
+            "sl_assessment": "",
+            "tp_assessment": "",
             "elapsed_seconds": elapsed,
+            "analysis_dir": str(save_dir) if save_dir else "",
         }
 
     risk_factor = assessment["risk_factor"]
@@ -615,12 +916,18 @@ def analyze_signal_charts(
     red_flags = assessment.get("red_flags", [])
     supports = assessment.get("supports", [])
     reasoning = assessment.get("reasoning", "")
+    sl_assessment = assessment.get("sl_assessment", "")
+    tp_assessment = assessment.get("tp_assessment", "")
 
     log.info(
         f"{symbol}: chart analysis complete in {elapsed:.1f}s — "
         f"alignment={alignment} risk_factor={risk_factor:.2f} "
         f"red_flags={len(red_flags)} supports={len(supports)}"
     )
+    if sl_assessment:
+        log.info(f"{symbol}: SL assessment: {sl_assessment}")
+    if tp_assessment:
+        log.info(f"{symbol}: TP assessment: {tp_assessment}")
     if reasoning:
         log.info(f"{symbol}: GPT reasoning: {reasoning}")
 
@@ -631,5 +938,8 @@ def analyze_signal_charts(
         "red_flags": red_flags,
         "supports": supports,
         "alignment": alignment,
+        "sl_assessment": sl_assessment,
+        "tp_assessment": tp_assessment,
         "elapsed_seconds": elapsed,
+        "analysis_dir": str(save_dir) if save_dir else "",
     }

@@ -302,6 +302,19 @@ SCAN_GROUPS = [
 EXCLUDE_SYMBOLS: list[str] = []
 
 # ═════════════════════════════════════════════════════════════════════════════
+#  CRYPTO — Traded 24/7, exempt from forex session and weekend restrictions
+# ═════════════════════════════════════════════════════════════════════════════
+# Known crypto symbol prefixes (matched against the start of the symbol name).
+# Any symbol whose base currency starts with one of these is classified as
+# crypto and exempted from forex market-hours, Friday wind-down, and weekend
+# close logic.
+CRYPTO_PREFIXES: list[str] = [
+    "BTC", "ETH", "LTC", "BCH", "XRP", "SOL", "DOGE", "ADA",
+    "BNB", "DOT", "EOS", "LINK", "UNI", "XLM", "XTZ", "AVAX",
+    "MATIC", "GLMR", "KSM",
+]
+
+# ═════════════════════════════════════════════════════════════════════════════
 #  MARKET SESSIONS (UTC hours)
 # ═════════════════════════════════════════════════════════════════════════════
 SESSIONS = {
@@ -311,7 +324,7 @@ SESSIONS = {
     "NewYork": {"open": 13, "close": 22},
 }
 
-# Best sessions per currency
+# Best sessions per currency (crypto is handled separately — always allowed)
 CURRENCY_SESSIONS = {
     "AUD": ["Sydney", "Tokyo"],
     "NZD": ["Sydney", "Tokyo"],
@@ -336,6 +349,9 @@ CORRELATION_GROUPS = [
     ["XAUUSD", "XAGUSD"],                                # metals
     ["USOIL", "UKOIL"],                                  # oil
     ["US30", "US500", "NAS100"],                          # US indices
+    ["BTCUSD", "BTCJPY"],                                 # BTC pair correlation
+    ["ETHUSD", "ETHJPY"],                                 # ETH pair correlation
+    ["BTCUSD", "ETHUSD", "SOLUSD"],                       # major crypto (highly correlated)
 ]
 
 # ═════════════════════════════════════════════════════════════════════════════

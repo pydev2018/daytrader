@@ -2,9 +2,18 @@
 ===============================================================================
   Market Hours — session detection, best-time-to-trade logic
 ===============================================================================
+
+Crypto symbols trade 24/7 and are exempt from:
+  - Forex market open/close (Sunday 17:00 ET → Friday 17:00 ET)
+  - Friday wind-down (no new trades after 12:00 ET)
+  - Weekend protection (emergency close at 16:30 ET Friday)
+  - Session-based symbol filtering
+
+Crypto identification uses config.CRYPTO_PREFIXES (e.g. BTC, ETH, SOL …).
 """
 
 from datetime import datetime, timezone
+from functools import lru_cache
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -20,6 +29,32 @@ def utcnow() -> datetime:
     """Return timezone-aware UTC now."""
     return datetime.now(timezone.utc)
 
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  CRYPTO DETECTION
+# ═════════════════════════════════════════════════════════════════════════════
+
+@lru_cache(maxsize=256)
+def is_crypto_symbol(symbol: str) -> bool:
+    """
+    Return True if *symbol* is a cryptocurrency instrument.
+
+    Matches against config.CRYPTO_PREFIXES — any symbol whose name
+    starts with one of these prefixes (e.g. BTCUSD, ETHJPY, SOLUSD)
+    is classified as crypto.
+
+    Results are cached for the lifetime of the process (symbol names
+    don't change at runtime).
+    """
+    sym_upper = symbol.upper()
+    # Strip broker suffixes like ".sml" for matching
+    base = sym_upper.split(".")[0]
+    return any(base.startswith(prefix) for prefix in cfg.CRYPTO_PREFIXES)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  SESSION HELPERS
+# ═════════════════════════════════════════════════════════════════════════════
 
 def _hour_in_range(hour: int, open_h: int, close_h: int) -> bool:
     """Check if *hour* (0-23) falls inside [open_h, close_h) handling midnight wrap."""
@@ -40,15 +75,24 @@ def active_sessions(now: Optional[datetime] = None) -> list[str]:
     ]
 
 
-def is_market_open(now: Optional[datetime] = None) -> bool:
+# ═════════════════════════════════════════════════════════════════════════════
+#  FOREX MARKET HOURS
+# ═════════════════════════════════════════════════════════════════════════════
+
+def is_market_open(now: Optional[datetime] = None, symbol: str = "") -> bool:
     """
     Forex markets are open Sunday 17:00 ET → Friday 17:00 ET.
 
+    **Crypto symbols are always considered "market open"** — they trade
+    24/7/365 with no weekend gaps.
+
     Using New York time (America/New_York) as the reference clock,
-    which automatically handles US DST transitions.  This eliminates
-    the previous bug where hardcoded UTC hours were wrong for ~7 months
-    of the year (March–November).
+    which automatically handles US DST transitions.
     """
+    # Crypto trades 24/7
+    if symbol and is_crypto_symbol(symbol):
+        return True
+
     now = now or utcnow()
     # Convert to New York time for the canonical open/close check
     ny = now.astimezone(_NY_TZ)
@@ -71,13 +115,15 @@ def is_market_open(now: Optional[datetime] = None) -> bool:
     return True
 
 
-def is_new_trade_allowed(now: Optional[datetime] = None) -> bool:
+def is_new_trade_allowed(now: Optional[datetime] = None,
+                         symbol: str = "") -> bool:
     """
     Whether we should open NEW trades right now.
 
-    Separate from is_market_open() because we stop opening new trades
-    well before the market actually closes:
+    **Crypto symbols are always allowed** — they trade 24/7 and
+    are not subject to Friday wind-down or weekend gap risk.
 
+    For forex/CFDs:
       - Friday after 12:00 ET (noon NY) → NO new trades.
         Reason: the London/NY overlap ends, liquidity drops, and
         any H1-based Pristine entry needs 4-8+ hours to reach TP.
@@ -91,6 +137,10 @@ def is_new_trade_allowed(now: Optional[datetime] = None) -> bool:
     through Friday close.  The weekend emergency close at ~16:30 ET is
     the absolute last resort for positions that survived the afternoon.
     """
+    # Crypto trades 24/7 — no wind-down
+    if symbol and is_crypto_symbol(symbol):
+        return True
+
     if not is_market_open(now):
         return False
 
@@ -105,7 +155,16 @@ def is_new_trade_allowed(now: Optional[datetime] = None) -> bool:
 
 
 def is_good_session_for_symbol(symbol: str, now: Optional[datetime] = None) -> bool:
-    """Check if the current session is a good time to trade *symbol*."""
+    """
+    Check if the current session is a good time to trade *symbol*.
+
+    **Crypto symbols always return True** — they have no preferred
+    session; liquidity is distributed around the clock.
+    """
+    # Crypto is always a good session
+    if is_crypto_symbol(symbol):
+        return True
+
     current = set(active_sessions(now))
     if not current:
         return False
@@ -122,7 +181,16 @@ def is_good_session_for_symbol(symbol: str, now: Optional[datetime] = None) -> b
 
 
 def session_score(symbol: str, now: Optional[datetime] = None) -> float:
-    """Return 0.0-1.0 score for how good the current session is for this symbol."""
+    """
+    Return 0.0-1.0 score for how good the current session is for this symbol.
+
+    Crypto always returns 0.7 (reasonable baseline — no single session
+    is definitively "best" for crypto, but volatility tends to spike
+    around US/Asia hours).
+    """
+    if is_crypto_symbol(symbol):
+        return 0.7
+
     current = set(active_sessions(now))
     if not current:
         return 0.0

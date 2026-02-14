@@ -187,28 +187,66 @@ class Watchlist:
         n_refreshed = 0
 
         for symbol, sa in analyses.items():
-            # ── Basic qualification gates ──────────────────────────────
+            # ── Basic qualification gates (with diagnostic logging) ────
             if sa.trade_direction is None:
                 continue
             if sa.confluence_score < cfg.WATCHLIST_SETUP_THRESHOLD:
                 continue
+
+            # ── From here, the symbol passed the score threshold ───────
+            # Log all candidates so we can diagnose empty watchlist issues.
+            log.info(
+                f"  {symbol}: CANDIDATE {sa.trade_direction} "
+                f"score={sa.confluence_score:.1f} "
+                f"entry={sa.entry_price:.5f} SL={sa.stop_loss:.5f} "
+                f"TP={sa.take_profit:.5f} ATR={sa.atr:.5f}"
+            )
             if sa.entry_price <= 0 or sa.stop_loss <= 0 or sa.take_profit <= 0:
+                log.info(
+                    f"  {symbol}: REJECTED (price/SL/TP zero) — "
+                    f"entry={sa.entry_price:.5f} SL={sa.stop_loss:.5f} "
+                    f"TP={sa.take_profit:.5f} score={sa.confluence_score:.1f}"
+                )
                 continue
             if sa.atr <= 0:
+                log.info(f"  {symbol}: REJECTED (ATR zero) score={sa.confluence_score:.1f}")
                 continue
 
             # SL/TP side validation
             if sa.trade_direction == "BUY":
                 if sa.stop_loss >= sa.entry_price or sa.take_profit <= sa.entry_price:
+                    log.info(
+                        f"  {symbol}: REJECTED (SL/TP wrong side for BUY) — "
+                        f"entry={sa.entry_price:.5f} SL={sa.stop_loss:.5f} "
+                        f"TP={sa.take_profit:.5f} score={sa.confluence_score:.1f}"
+                    )
                     continue
             else:
                 if sa.stop_loss <= sa.entry_price or sa.take_profit >= sa.entry_price:
+                    log.info(
+                        f"  {symbol}: REJECTED (SL/TP wrong side for SELL) — "
+                        f"entry={sa.entry_price:.5f} SL={sa.stop_loss:.5f} "
+                        f"TP={sa.take_profit:.5f} score={sa.confluence_score:.1f}"
+                    )
                     continue
 
             # R:R gate
             risk = abs(sa.entry_price - sa.stop_loss)
             reward = abs(sa.take_profit - sa.entry_price)
-            if risk <= 0 or reward <= 0 or reward / risk < cfg.MIN_RISK_REWARD_RATIO:
+            if risk <= 0 or reward <= 0:
+                log.info(
+                    f"  {symbol}: REJECTED (zero risk/reward) — "
+                    f"risk={risk:.5f} reward={reward:.5f} score={sa.confluence_score:.1f}"
+                )
+                continue
+            rr = reward / risk
+            if rr < cfg.MIN_RISK_REWARD_RATIO:
+                log.info(
+                    f"  {symbol}: REJECTED (R:R {rr:.2f} < "
+                    f"{cfg.MIN_RISK_REWARD_RATIO}) — "
+                    f"entry={sa.entry_price:.5f} SL={sa.stop_loss:.5f} "
+                    f"TP={sa.take_profit:.5f} score={sa.confluence_score:.1f}"
+                )
                 continue
 
             qualifying.add(symbol)
@@ -387,10 +425,6 @@ class Watchlist:
         if not self._entries:
             return []
 
-        # ── Session gate ──────────────────────────────────────────────
-        if not market_hours.is_market_open():
-            return []
-
         signals: list[TradeSignal] = []
         triggered_symbols: list[str] = []
         now = _time.time()
@@ -403,6 +437,11 @@ class Watchlist:
         }
 
         for symbol, entry in list(self._entries.items()):
+            # ── Per-symbol session gate ────────────────────────────────
+            # Crypto is always allowed (24/7).  Forex/CFDs require the
+            # forex market to be open.
+            if not market_hours.is_market_open(symbol=symbol):
+                continue
             entry.last_checked = now
 
             # ── Cooldown check ────────────────────────────────────────
