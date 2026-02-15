@@ -1,1 +1,1 @@
-# Wolf Trading System — Test Suite
+"""Grid trading system test suite."""

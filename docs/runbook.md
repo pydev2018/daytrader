@@ -1,94 +1,138 @@
-# Runbook (Operations)
+# Runbook — Grid Trading System
 
-## Deployment (Windows)
-1. **Install MT5 terminal** and verify you can log in manually.
-2. **Install Python dependencies**:
-   - `pip install -r requirements.txt`
-3. **Configure environment**:
-   - Copy `.env.template` → `.env` and set:
-     - `MT5_PATH`, `MT5_LOGIN`, `MT5_PASSWORD`, `MT5_SERVER` (if not using current MT5 session).
-     - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` for alerts.
-     - `OPENAI_API_KEY` if chart analysis is enabled.
-4. **Verify connection**:
-   - `python main.py --status` (prints account and symbol status).
+## Prerequisites
+- **OS**: Windows (MT5 only runs on Windows)
+- **Python**: 3.10+ (tested on 3.11)
+- **Conda env**: `tradebot`
+- **MT5 Terminal**: installed and logged in
 
-## Running the System
-- **Live trading**: `python main.py`
-- **Scan-only**: `python main.py --scan-only`
-- **Status**: `python main.py --status`
-- **Conda wrapper**: `run.bat main.py`
-  
-Backtesting (Sniper):
-- `python backtest_sniper.py --start YYYY-MM-DD --end YYYY-MM-DD --symbols EURUSD,GBPUSD`
+## Environment Setup
 
-## Continuous Operation
-No service/scheduler configuration exists in the repo. Best-practice options:
-- **Windows Task Scheduler**: run `python main.py` at startup and restart on failure.
-- **NSSM (service wrapper)**: wrap `run.bat main.py` into a Windows service.
+```bash
+conda activate tradebot
+pip install -r requirements.txt
+```
 
-Document any chosen approach in a local ops SOP to standardize restarts and logs.
+## Configuration
 
-## Logs and Data Locations
-- Logs: `logs/<logger>.log` (rotating file handler) (`utils/logger.py`).
-- Trade journal: `data/trade_journal.json` (`risk/risk_manager.py`).
-- Risk state: `data/risk_state.json` (persisted daily/weekly state) (`risk/risk_manager.py`).
-- News cache: `data/news_cache.json` (`core/news_aggregator.py`).
-- Chart analysis artifacts: `logs/chart_analysis/<SYMBOL>/<timestamp>/` (`core/chart_analyst.py`).
+1. Copy `.env.template` to `.env`
+2. Fill in MT5 credentials and trading parameters
+3. Key parameters to review before first run:
 
-## Observability
-- **Logs**: structured UTC logs to console and rotating files (`utils/logger.py`).
-- **Alerts**: Telegram notifications for trade opens/closes and safety events (`alerts/telegram.py`).
-- **Metrics**: no metrics export or dashboards are implemented; consider adding Prometheus/CSV metrics if needed.
+| Parameter | Purpose | Conservative Default |
+|---|---|---|
+| `GRID_SYMBOLS` | Symbols to trade | `EURUSD` |
+| `BASE_ORDER_SIZE_LOTS` | Base lot size | `0.01` |
+| `MAX_INVENTORY_LOTS` | Max inventory cap | `1.0` |
+| `MAX_DRAWDOWN_PCT` | Kill-switch drawdown | `15.0` |
+| `DAILY_LOSS_LIMIT_PCT` | Daily loss halt | `3.0` |
+| `MAX_LEVERAGE` | Leverage cap | `5.0` |
 
-## Safe Shutdown / Restart
-`main.py` installs a signal handler and exits the loop on `SIGINT`/`SIGTERM`. Use Ctrl+C in the console or stop the service cleanly to allow `WolfEngine` to finish its cycle and disconnect MT5.
+## Commands
 
-## Incident Playbooks
-### MT5 Disconnect / Reconnect Loop
-Symptoms: repeated `MT5 connection lost — reconnecting …`.
-Actions:
-- Verify MT5 terminal is running and logged in.
-- Confirm `MT5_PATH` and credentials in `.env`.
-- Restart `main.py` if connection does not recover (`core/mt5_connector.py` retries then raises).
+### Live Trading
+```bash
+conda activate tradebot
+python main.py
+```
 
-### Trading Halted (Daily/Weekly/Drawdown)
-Symptoms: log shows `Trading halted`.
-Actions:
-- Review `data/risk_state.json` and logs for halt reason (`risk/risk_manager.py`).
-- After investigation, a manual clear is possible via `RiskManager.clear_halt(confirm="I_ACCEPT_THE_RISK")` (no CLI wrapper exists; add one if needed).
+### Account Status Check
+```bash
+python main.py --status
+```
 
-### Orders Rejected / STOPLEVEL Errors
-Symptoms: `order_check failed` or `order_send rejected`.
-Actions:
-- Inspect logs from `execution/trade_executor.py`.
-- Verify broker minimum stop distance; executor auto-adjusts SL/TP but still may be rejected.
-- Confirm symbol is tradeable and selected in MarketWatch (`core/mt5_connector.py`).
+### Run Tests
+```bash
+conda activate tradebot
+python -m pytest tests/ -v
+```
 
-### Empty Watchlist / No Signals
-Actions:
-- Check `SCAN_GROUPS` and `EXCLUDE_SYMBOLS` in `config.py`.
-- Verify market sessions are open (`utils/market_hours.py`).
-- Check spread filter (`MAX_SPREAD_PIPS`) and event windows (`core/news_aggregator.py`).
+### Run Backtest
+```python
+from backtest.data import load_csv, normalize_bars
+from backtest.grid_engine import GridBacktestEngine
 
-### Chart Analysis Failing
-Symptoms: chart analysis skipped or errors.
-Actions:
-- Verify `OPENAI_API_KEY` and `CHART_ANALYSIS_ENABLED` (`config.py`).
-- System will continue with `risk_factor=1.0` if analysis fails (`core/chart_analyst.py`).
+df = normalize_bars(load_csv("path/to/bidask_data.csv"))
+engine = GridBacktestEngine(df, contract_size=100000.0, tick_size=0.00001)
+result = engine.run(starting_equity=10000.0, slip_ticks=1, spread_mult=1.0)
 
-### Telegram Alerts Not Sent
-Actions:
-- Verify `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env`.
-- Check network access and logs (`alerts/telegram.py`).
+print(f"PnL (net): ${result.total_pnl_net:,.2f}")
+print(f"Trades: {result.trades} (W:{result.wins} L:{result.losses})")
+print(f"Max DD: {result.max_drawdown:.1f}%")
+print(f"Sharpe: {result.sharpe:.2f}")
+print(f"Commission: ${result.total_commission:,.2f}")
+```
 
-## Security Notes
-Credentials are loaded from `.env` in the repo root (`config.py`). This is plaintext by default; recommended improvements:
-- Use Windows Credential Manager or environment variables injected by the service.
-- Restrict filesystem permissions on `.env`.
+### Walk-Forward Validation
+```python
+from backtest.grid_engine import walk_forward
 
-## Repository Evidence Index
-- `main.py` — runtime loop and shutdown handling.
-- `core/mt5_connector.py` — connection and reconnect logic.
-- `execution/trade_executor.py` — order validation and error handling.
-- `risk/risk_manager.py` — halts, persistence, and trade journal.
-- `utils/logger.py` — log paths and rotation.
+windows = walk_forward(df, contract_size=100000.0, tick_size=0.00001, n_windows=5)
+for i, w in enumerate(windows):
+    oos = w.test_result
+    print(f"Window {i}: OOS PnL=${oos.total_pnl_net:,.2f} DD={oos.max_drawdown:.1f}%")
+```
+
+## Operational States
+
+| State | Meaning | Action |
+|---|---|---|
+| **ACTIVE** | Normal operation | Grid entries + exits enabled |
+| **CAUTION** | Trend detected | Size reduced by 50% |
+| **PAUSED** | Vol shock / spread blowout | No new entries; exits only |
+| **HALTED** | Risk limit breached | All orders cancelled; unwind attempted |
+
+## Risk Controls
+
+### Auto-clearing halts
+These halts clear automatically when the condition resolves:
+- `inventory_limit` → clears when inventory drops below `MAX_INVENTORY_LOTS`
+- `leverage_limit` → clears when leverage drops below `MAX_LEVERAGE`
+- `margin_level` → clears when margin level rises above 200%
+- `daily_loss_limit` → clears at start of new trading day (UTC)
+- `weekly_loss_limit` → clears at start of new trading week (Monday UTC)
+- `consecutive_errors` → clears on next successful loop
+
+### Manual-reset halts
+- `max_drawdown` → **requires manual intervention** (safety by design)
+  - To reset: delete `data/state/risk_state.json` or set `halted: false` in the file
+
+## Monitoring
+
+### Logs
+- Console: real-time stdout
+- File: `logs/wolf.log` (10MB rotating, 5 backups)
+
+### Trade Journal
+- Path: `data/trade_journal.jsonl`
+- Format: one JSON object per line
+- Events: `fill`, `order_placed`, `order_cancelled`, `safety`
+
+### Telegram Alerts
+Configure `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env` to receive:
+- Trade notifications
+- Risk halt alerts
+- Daily summaries
+- Bot start/stop status
+
+## Troubleshooting
+
+### "MT5 connection lost"
+- Check MT5 terminal is running and logged in
+- Verify `MT5_PATH` in `.env` points to correct terminal
+- System retries 5 times with exponential backoff before halting
+
+### "CONFIGURATION ERRORS" on startup
+- Check `.env` for invalid parameter values
+- All parameters are validated at startup with clear error messages
+
+### System halted and won't restart
+- Check `data/state/risk_state.json` for `halted: true`
+- If `halt_reason` is `max_drawdown`, manual reset required (see above)
+- Other halt reasons auto-clear when conditions resolve
+
+### Orders not being placed
+- Check if regime is PAUSED (spread/vol gate)
+- Check if edge gate fails (spacing too close to cost floor)
+- Check MT5 terminal log for order rejections
+- Verify stops_level constraints aren't filtering orders

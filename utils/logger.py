@@ -2,6 +2,7 @@
 ===============================================================================
   Logging — structured, coloured console + rotating file output
 ===============================================================================
+Fix: Handler attachment now happens inside the lock to prevent race conditions.
 """
 
 import logging
@@ -9,9 +10,8 @@ import sys
 import time
 import threading
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
 
-import config as cfg
+from config import settings as cfg
 
 _setup_lock = threading.Lock()
 
@@ -28,26 +28,26 @@ def setup_logging(name: str = "wolf") -> logging.Logger:
             return logger
 
         fmt = logging.Formatter(
-            "[%(asctime)s UTC] %(levelname)-8s %(name)-18s │ %(message)s",
+            "[%(asctime)s UTC] %(levelname)-8s %(name)-18s | %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
         )
-        # Force UTC timestamps — matches MT5 server time and market hours logic
+        # Force UTC timestamps
         fmt.converter = time.gmtime
 
-    # ── Console handler ──────────────────────────────────────────────────
-    ch = logging.StreamHandler(sys.stdout)
-    ch.setFormatter(fmt)
-    logger.addHandler(ch)
+        # Console handler
+        ch = logging.StreamHandler(sys.stdout)
+        ch.setFormatter(fmt)
+        logger.addHandler(ch)
 
-    # ── File handler (10 MB, 5 backups) ──────────────────────────────────
-    fh = RotatingFileHandler(
-        cfg.LOG_DIR / f"{name}.log",
-        maxBytes=10 * 1024 * 1024,
-        backupCount=5,
-        encoding="utf-8",
-    )
-    fh.setFormatter(fmt)
-    logger.addHandler(fh)
+        # File handler (10 MB, 5 backups)
+        fh = RotatingFileHandler(
+            cfg.LOG_DIR / f"{name}.log",
+            maxBytes=10 * 1024 * 1024,
+            backupCount=5,
+            encoding="utf-8",
+        )
+        fh.setFormatter(fmt)
+        logger.addHandler(fh)
 
     return logger
 
