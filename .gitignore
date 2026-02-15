@@ -209,4 +209,6 @@ __marimo__/
 # Wolf Trading System
 logs/
 data/trade_journal.json
+data/state/
 .env
+env.txt
