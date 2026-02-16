@@ -254,6 +254,29 @@ class MT5Broker:
     #  ORDER OPERATIONS
     # =====================================================================
 
+    def pick_filling_mode(self, sym_info: dict | None) -> int:
+        """Pick a supported filling mode for the symbol.
+
+        Some brokers expose a single mode via `filling_mode` (enum),
+        others expose a bitmask in `trade_fill_flags`. We prefer IOC,
+        then RETURN, then FOK as a last resort.
+        """
+        if not sym_info:
+            return mt5.ORDER_FILLING_IOC
+
+        flags = sym_info.get("trade_fill_flags") or 0
+        if isinstance(flags, int):
+            # Bitmask: 1=FOK, 2=IOC, 4=RETURN
+            if flags & 2:
+                return mt5.ORDER_FILLING_IOC
+            if flags & 4:
+                return mt5.ORDER_FILLING_RETURN
+            if flags & 1:
+                return mt5.ORDER_FILLING_FOK
+
+        # Fallback: prefer IOC for OANDA/FX, then RETURN.
+        return mt5.ORDER_FILLING_IOC
+
     def check_order(self, request: dict) -> Optional[dict]:
         self.ensure_connected()
         result = mt5.order_check(request)
@@ -268,6 +291,7 @@ class MT5Broker:
         Uses exponential backoff with jitter for retriable return codes.
         """
         self.ensure_connected()
+        invalid_fill = getattr(mt5, "TRADE_RETCODE_INVALID_FILL", 10030)
         for attempt in range(1 + max_retries):
             result = mt5.order_send(request)
             if result is None:
@@ -278,6 +302,32 @@ class MT5Broker:
 
             if retcode in (mt5.TRADE_RETCODE_DONE, 10010):
                 return rd
+            # "No changes" (already set). Treat as success for modify/SLTP.
+            if retcode == 10025 and request.get("action") in (
+                mt5.TRADE_ACTION_SLTP,
+                mt5.TRADE_ACTION_MODIFY,
+            ):
+                return rd
+
+            # If filling mode is unsupported, retry with alternatives.
+            if retcode == invalid_fill and "type_filling" in request:
+                tried = {request.get("type_filling")}
+                for alt in (
+                    mt5.ORDER_FILLING_IOC,
+                    mt5.ORDER_FILLING_RETURN,
+                    mt5.ORDER_FILLING_FOK,
+                ):
+                    if alt in tried:
+                        continue
+                    req2 = dict(request)
+                    req2["type_filling"] = alt
+                    result2 = mt5.order_send(req2)
+                    if result2 is None:
+                        continue
+                    rd2 = result2._asdict()
+                    if rd2.get("retcode") in (mt5.TRADE_RETCODE_DONE, 10010):
+                        return rd2
+                    tried.add(alt)
 
             if retcode in RETRIABLE_RETCODES and attempt < max_retries:
                 delay = 0.5 * (2 ** attempt) + random.random() * 0.2
@@ -323,6 +373,69 @@ class MT5Broker:
             "magic": cfg.MAGIC_NUMBER,
         }
         return self.send_order(request, max_retries=1)
+
+    def modify_position_tp(
+        self, position_ticket: int, symbol: str, sl: float = 0.0, tp: float = 0.0
+    ) -> Optional[dict]:
+        """Set SL/TP on an open position using TRADE_ACTION_SLTP.
+
+        This modifies the position itself, not a pending order.
+        On hedging accounts, this is how you set take-profit on a specific position.
+        """
+        tp = self.normalize_price(symbol, tp)
+        sl = self.normalize_price(symbol, sl) if sl > 0 else 0.0
+        request = {
+            "action": mt5.TRADE_ACTION_SLTP,
+            "position": position_ticket,
+            "symbol": symbol,
+            "sl": sl,
+            "tp": tp,
+            "magic": cfg.MAGIC_NUMBER,
+        }
+        return self.send_order(request, max_retries=2)
+
+    def close_position(
+        self, position_ticket: int, symbol: str, volume: float, side: str
+    ) -> Optional[dict]:
+        """Close a specific position by ticket on a hedging account.
+
+        Sends a TRADE_ACTION_DEAL with the position field set,
+        which tells MT5 to close THAT specific position rather than
+        opening a new one.
+        """
+        self.ensure_connected()
+        tick = mt5.symbol_info_tick(symbol)
+        if tick is None:
+            return None
+
+        if side == "BUY":
+            # Closing a short: buy at ask
+            order_type = mt5.ORDER_TYPE_BUY
+            price = tick.ask
+        else:
+            # Closing a long: sell at bid
+            order_type = mt5.ORDER_TYPE_SELL
+            price = tick.bid
+
+        price = self.normalize_price(symbol, price)
+        volume = self.normalize_volume(symbol, volume)
+        if volume <= 0:
+            return None
+
+        sym_info = self.symbol_info(symbol) or {}
+        request = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "position": position_ticket,
+            "symbol": symbol,
+            "volume": volume,
+            "type": order_type,
+            "price": price,
+            "deviation": 20,
+            "magic": cfg.MAGIC_NUMBER,
+            "comment": "grid_close",
+            "type_filling": self.pick_filling_mode(sym_info),
+        }
+        return self.send_order(request, max_retries=2)
 
     def calc_margin(
         self, action: int, symbol: str, volume: float, price: float

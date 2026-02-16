@@ -94,15 +94,45 @@ class GridRiskManager:
         if not force and current_hash == self._last_persisted_hash:
             return
         path = cfg.RISK_STATE_PATH
-        path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+        except Exception as exc:
+            log.warning(f"Risk state disabled (cannot create dir): {exc}")
+            return
+        data = json.dumps(self._state_dict(), indent=2)
+
+        # Strategy 1: Atomic write
         try:
             fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
             with open(fd, "w", encoding="utf-8") as f:
-                json.dump(self._state_dict(), f, indent=2)
+                f.write(data)
             Path(tmp).replace(path)
             self._last_persisted_hash = current_hash
+            return
+        except PermissionError:
+            pass
         except Exception as exc:
-            log.warning(f"Failed to persist risk state: {exc}")
+            log.warning(f"Atomic risk save failed: {exc}")
+
+        # Strategy 2: Direct overwrite
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(data)
+            self._last_persisted_hash = current_hash
+            return
+        except Exception as exc:
+            log.warning(f"Direct risk save failed: {exc}")
+
+        # Strategy 3: Backup file
+        import time as _time
+        backup = path.with_suffix(f".{int(_time.time())}.bak")
+        try:
+            with open(backup, "w", encoding="utf-8") as f:
+                f.write(data)
+            self._last_persisted_hash = current_hash
+            log.warning(f"Risk state saved to backup: {backup}")
+        except Exception as exc:
+            log.error(f"ALL risk save strategies failed: {exc}")
 
     def _restore_state(self):
         path = cfg.RISK_STATE_PATH
@@ -124,6 +154,29 @@ class GridRiskManager:
             self._last_persisted_hash = self._state_hash()
         except Exception as exc:
             log.warning(f"Failed to restore risk state: {exc}")
+
+    def _account_notional(self) -> float:
+        """Compute total notional exposure across all GRID positions."""
+        total = 0.0
+        positions = self.broker.our_positions()
+        for pos in positions:
+            symbol = pos.get("symbol", "")
+            volume = pos.get("volume", 0.0)
+            if not symbol or volume <= 0:
+                continue
+            sym_info = self.broker.symbol_info(symbol) or {}
+            contract_size = sym_info.get("trade_contract_size", 0.0)
+            if contract_size <= 0:
+                continue
+            tick = self.broker.symbol_tick(symbol)
+            if tick and tick.get("bid") and tick.get("ask"):
+                mid = (tick["bid"] + tick["ask"]) / 2.0
+            else:
+                mid = pos.get("price_open", 0.0)
+            if mid <= 0:
+                continue
+            total += abs(volume) * contract_size * mid
+        return total
 
     # ── Equity tracking ───────────────────────────────────────────────────
 
@@ -218,6 +271,25 @@ class GridRiskManager:
         warnings: list[str] = []
         risk_mult = 1.0
 
+        # ── Guard against missing account data ───────────────────────
+        balance = acc.get("balance", 0.0)
+        if equity <= 0 or balance <= 0:
+            halt_reasons.append("account_data_missing")
+            self._halted = True
+            self._halt_reason = "account_data_missing"
+            self._risk_multiplier = 0.0
+            self._persist_state()
+            return RiskStatus(
+                halted=True,
+                reason="account_data_missing",
+                risk_multiplier=0.0,
+                warnings=["ACCOUNT DATA MISSING — equity/balance <= 0"],
+            )
+
+        account_notional = self._account_notional()
+        if account_notional > 0 and acc.get("margin_level", 0.0) <= 0:
+            halt_reasons.append("margin_data_missing")
+
         # ── Drawdown (catastrophic — sets permanent halt) ────────────
         if self._peak_equity > 0:
             dd_pct = (self._peak_equity - equity) / self._peak_equity * 100
@@ -250,15 +322,19 @@ class GridRiskManager:
 
         # ── Leverage / notional ───────────────────────────────────────
         if equity > 0:
-            leverage = notional / equity
+            leverage = account_notional / equity
             if leverage > cfg.MAX_LEVERAGE:
                 halt_reasons.append("leverage_limit")
             elif leverage > cfg.MAX_LEVERAGE * 0.8:
                 warnings.append(f"leverage_warning({leverage:.1f}x)")
                 risk_mult = min(risk_mult, 0.5)
 
-            if notional > equity * cfg.MAX_NOTIONAL_MULT_EQUITY:
+            if account_notional > equity * cfg.MAX_NOTIONAL_MULT_EQUITY:
                 halt_reasons.append("notional_limit")
+
+            # Per-symbol notional cap (still enforced)
+            if notional > equity * cfg.MAX_NOTIONAL_MULT_EQUITY:
+                halt_reasons.append("symbol_notional_limit")
 
         # ── Margin level ──────────────────────────────────────────────
         margin_level = acc.get("margin_level", 0.0)

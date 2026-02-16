@@ -46,6 +46,7 @@ class GridState:
     last_update_ts: float
     rungs: list[GridRung]
     last_deal_time: str
+    last_deal_id: int
     inventory_lots: float
     paused: bool = False
     pause_reason: str = ""
@@ -72,6 +73,7 @@ def _state_from_dict(data: dict[str, Any]) -> GridState:
         last_update_ts=data.get("last_update_ts", 0.0),
         rungs=rungs,
         last_deal_time=data.get("last_deal_time", ""),
+        last_deal_id=int(data.get("last_deal_id", 0) or 0),
         inventory_lots=data.get("inventory_lots", 0.0),
         paused=data.get("paused", False),
         pause_reason=data.get("pause_reason", ""),
@@ -93,17 +95,53 @@ def load_state(path: Path | None = None) -> dict[str, GridState]:
 
 
 def save_state(states: dict[str, GridState], path: Path | None = None):
-    """Persist grid state atomically."""
+    """Persist grid state — bulletproof for Windows.
+
+    Strategy:
+    1. Try atomic write (tmp + replace) — best case
+    2. If replace fails (file locked), try direct overwrite
+    3. If that fails too, write to a numbered backup
+    Never silently lose state.
+    """
     path = path or cfg.GRID_STATE_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {sym: asdict(state) for sym, state in states.items()}
+    data = json.dumps(payload, indent=2)
+
+    # Strategy 1: Atomic write (tmp + replace)
     tmp_path = path.with_suffix(".tmp")
     try:
         with open(tmp_path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
+            f.write(data)
         tmp_path.replace(path)
+        return  # success
+    except PermissionError:
+        pass  # file locked — try fallback
     except Exception as exc:
-        log.warning(f"Failed to save grid state: {exc}")
+        log.warning(f"Atomic save failed: {exc}")
+
+    # Strategy 2: Direct overwrite (not atomic but works when file is locked by replace)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(data)
+        # Clean up tmp if it exists
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+        return  # success
+    except Exception as exc:
+        log.warning(f"Direct save failed: {exc}")
+
+    # Strategy 3: Write to numbered backup (never lose data)
+    import time
+    backup = path.with_suffix(f".{int(time.time())}.bak")
+    try:
+        with open(backup, "w", encoding="utf-8") as f:
+            f.write(data)
+        log.warning(f"State saved to backup: {backup}")
+    except Exception as exc:
+        log.error(f"ALL save strategies failed: {exc}")
 
 
 def new_state(symbol: str, grid_id: str) -> GridState:
@@ -123,6 +161,7 @@ def new_state(symbol: str, grid_id: str) -> GridState:
         last_update_ts=0.0,
         rungs=[],
         last_deal_time=lookback,
+        last_deal_id=0,
         inventory_lots=0.0,
         paused=False,
         pause_reason="",

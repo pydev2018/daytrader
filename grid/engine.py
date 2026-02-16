@@ -29,7 +29,7 @@ import MetaTrader5 as mt5
 from alerts.telegram import TelegramAlerter
 from brokers.mt5 import MT5Broker
 from config import settings as cfg
-from execution.order_manager import OrderManager
+from execution.order_manager import OrderManager, FillEvent
 from grid.anchor import EmaAnchor
 from grid.orders import build_rungs, desired_orders, update_rung_on_fill
 from grid.regime import classify_regime, compute_trend_z
@@ -128,6 +128,11 @@ class GridEngine:
         self._retiring_symbols: list[str] = []  # symbols winding down (exits only)
         self._last_scan_ts: float = 0.0
         self._scan_results: list[SymbolScore] = []
+        # Status logging
+        self._last_status_log_ts: float = 0.0
+        self._status_log_interval: float = 300.0  # every 5 minutes
+        self._fill_count: int = 0
+        self._session_pnl: float = 0.0
 
     def start(self):
         log.info("=" * 70)
@@ -152,6 +157,19 @@ class GridEngine:
             f"hedging={self.account_model.get('is_hedging')} "
             f"fifo={self.account_model.get('fifo_close')}"
         )
+        if not self.account_model.get("is_hedging"):
+            log.error("Hedging account required — refusing to start on netting/FIFO")
+            try:
+                bal = acc.get("balance", 0.0)
+                self.alerter.safety_event(
+                    "ACCOUNT_MODEL",
+                    "Non-hedging account detected — TP-by-position regime requires hedging",
+                    bal,
+                )
+            except Exception:
+                pass
+            self.broker.disconnect()
+            return
 
         # ── Initial symbol selection ─────────────────────────────────────
         if cfg.AUTO_SCAN_ENABLED:
@@ -167,7 +185,18 @@ class GridEngine:
             self.broker.disconnect()
             return
 
+        # ── Startup cleanup: cancel ALL orphaned orders ──────────────────
+        # On a fresh start or restart after crash, there may be pending
+        # orders from a previous grid_id that our sync logic won't see.
+        # Cancel everything with our magic number to start clean.
+        self._cancel_all_orphaned_orders()
+
         self._init_symbols(self._active_symbols)
+
+        # ── Adopt orphaned positions ─────────────────────────────────────
+        # After crash/restart, open positions with our magic number need
+        # to be adopted into the grid with proper exit orders, not abandoned.
+        self._adopt_orphaned_positions()
         self.alerter.bot_status(
             "STARTED",
             f"Active: {', '.join(self._active_symbols)}"
@@ -355,10 +384,13 @@ class GridEngine:
         grid_spacing = state.spacing if state.spacing else tick_size * 10
 
         # Detect fills (exit orders completing)
-        fills = self.order_mgr.detect_fills(symbol, state.last_deal_time)
+        fills = self.order_mgr.detect_fills(
+            symbol, state.last_deal_time, state.grid_id, state.last_deal_id
+        )
         if fills:
             equity = self.broker.account_equity()
             latest_time = state.last_deal_time
+            latest_deal_id = state.last_deal_id
             for fill in fills:
                 rung = next(
                     (r for r in state.rungs if r.rung_id == fill.rung_id), None
@@ -367,6 +399,7 @@ class GridEngine:
                     continue
                 update_rung_on_fill(rung, fill.price, grid_spacing, fill.time_iso)
                 latest_time = max(latest_time, fill.time_iso)
+                latest_deal_id = max(latest_deal_id, fill.deal_id)
                 self.order_mgr.journal.log_fill(
                     fill, equity=equity, inventory_lots=state.inventory_lots
                 )
@@ -375,6 +408,7 @@ class GridEngine:
                     f"at {fill.price}"
                 )
             state.last_deal_time = latest_time
+            state.last_deal_id = latest_deal_id
 
         # Check: are all positions closed?
         exit_rungs = [r for r in state.rungs if r.state == "EXIT"]
@@ -403,6 +437,199 @@ class GridEngine:
             self.alerter.bot_status(
                 "RETIRE COMPLETE", f"{symbol}: all positions closed"
             )
+
+    def _attach_position_to_rung(
+        self,
+        symbol: str,
+        state: GridState,
+        side: str,
+        open_price: float,
+        volume: float,
+        ticket: int,
+        grid_center: float,
+        spacing: float,
+        now_iso: str,
+        source: str,
+    ):
+        """Attach an open position to a rung and ensure TP is set."""
+        if spacing <= 0 or open_price <= 0 or volume <= 0 or not ticket:
+            return None
+
+        # 1) Already tracked by ticket
+        for rung in state.rungs:
+            if rung.order_ticket == ticket:
+                return rung
+
+        # 2) Match existing EXIT rung with missing ticket
+        for rung in state.rungs:
+            if (
+                rung.state == "EXIT"
+                and rung.order_ticket is None
+                and rung.fill_price is not None
+                and abs(rung.fill_price - open_price) < spacing * 0.3
+                and abs(rung.size - volume) < 0.015
+            ):
+                rung.order_ticket = ticket
+                rung.last_update = now_iso
+                if rung.exit_price is None:
+                    rung.exit_price = (
+                        open_price + spacing if side == "BUY" else open_price - spacing
+                    )
+                if rung.exit_price:
+                    self.order_mgr.set_exit_tp(symbol, ticket, rung.exit_price)
+                log.info(
+                    f"{symbol}: ATTACHED {source} to EXIT rung {rung.rung_id} "
+                    f"ticket={ticket}"
+                )
+                return rung
+
+        # 3) Match existing ENTRY rung (intended entry price)
+        for rung in state.rungs:
+            if (
+                rung.state == "ENTRY"
+                and abs(rung.entry_price - open_price) < spacing * 0.3
+                and abs(rung.size - volume) < 0.015
+            ):
+                update_rung_on_fill(rung, open_price, spacing, now_iso)
+                rung.size = volume
+                rung.order_ticket = ticket
+                if rung.exit_price:
+                    self.order_mgr.set_exit_tp(symbol, ticket, rung.exit_price)
+                log.info(
+                    f"{symbol}: ATTACHED {source} to ENTRY rung {rung.rung_id} "
+                    f"ticket={ticket}"
+                )
+                return rung
+
+        # 4) Create a new adopted rung
+        if grid_center and spacing > 0:
+            level_index = int(round((open_price - grid_center) / spacing))
+        else:
+            level_index = 0
+        existing_ids = {r.rung_id for r in state.rungs}
+        rung_id = f"A{ticket}"
+        while rung_id in existing_ids:
+            rung_id = f"A{len(existing_ids) + 1}"
+
+        from grid.state import GridRung
+        exit_price = open_price + spacing if side == "BUY" else open_price - spacing
+        new_rung = GridRung(
+            rung_id=rung_id,
+            level_index=level_index,
+            entry_side=side,
+            state="EXIT",
+            entry_price=open_price,
+            size=volume,
+            fill_price=open_price,
+            exit_price=exit_price,
+            order_ticket=ticket,
+            last_update=now_iso,
+        )
+        state.rungs.append(new_rung)
+        self.order_mgr.set_exit_tp(symbol, ticket, exit_price)
+        log.info(
+            f"{symbol}: ADOPTED {source} {side} {volume} lots at {open_price:.5f} "
+            f"→ exit at {exit_price:.5f} [{rung_id}]"
+        )
+        return new_rung
+
+    def _cancel_all_orphaned_orders(self):
+        """Cancel ALL pending orders with our magic number on startup.
+
+        After a crash, there may be orphaned orders from a previous grid_id
+        that the sync logic won't recognize (it only matches the current
+        grid_id prefix). This ensures a clean slate on every startup.
+        """
+        pending = self.broker.pending_orders()
+        if not pending:
+            return
+        cancelled_by_symbol: dict[str, int] = {}
+        for order in pending:
+            ticket = order.get("ticket", 0)
+            symbol = order.get("symbol", "")
+            if ticket:
+                self.order_mgr.cancel(ticket, reason="startup_cleanup")
+                cancelled_by_symbol[symbol] = cancelled_by_symbol.get(symbol, 0) + 1
+        for symbol, count in cancelled_by_symbol.items():
+            log.info(
+                f"{symbol}: cancelled {count} orphaned orders from previous session"
+            )
+
+    def _adopt_orphaned_positions(self):
+        """Adopt any open positions from a previous session into the grid.
+
+        On restart after a crash, there may be open positions with our
+        magic number that don't belong to any rung. Instead of closing
+        them at a loss, we CREATE rungs for them in EXIT state with
+        proper take-profit exits. The grid then manages them normally —
+        placing exit orders to capture profit.
+        """
+        for symbol in self._active_symbols:
+            state = self.states.get(symbol)
+            if state is None:
+                continue
+
+            sym_info = self.broker.symbol_info(symbol) or {}
+            positions = self.broker.our_positions(symbol)
+            if not positions:
+                continue
+
+            now_iso = datetime.now(timezone.utc).isoformat()
+            tick = self.broker.symbol_tick(symbol)
+            tick_size = sym_info.get("trade_tick_size") or sym_info.get("point", 0.0)
+            mid = (tick["bid"] + tick["ask"]) / 2.0 if tick else 0.0
+            spread = (tick["ask"] - tick["bid"]) if tick else 0.0
+            if state.spacing > 0:
+                spacing = state.spacing
+            elif tick_size > 0 and mid > 0:
+                spacing, _ = compute_spacing(
+                    mid=mid,
+                    spread=spread,
+                    tick_size=tick_size,
+                    sigma=0.0,
+                    step_seconds=cfg.GRID_LOOP_SECONDS,
+                    horizon_seconds=cfg.VOL_HORIZON_SECONDS,
+                    k_sigma=cfg.GRID_SPACING_K_SIGMA,
+                    k_cost=cfg.GRID_SPACING_K_COST,
+                    min_ticks=cfg.GRID_SPACING_MIN_TICKS,
+                    slip_ticks=cfg.SLIPPAGE_BUFFER_TICKS,
+                )
+            elif tick_size > 0:
+                spacing = cfg.GRID_SPACING_MIN_TICKS * tick_size
+            else:
+                spacing = 0.00030
+            adopted = 0
+
+            for pos in positions:
+                ticket = pos.get("ticket", 0)
+                volume = pos.get("volume", 0.0)
+                open_price = pos.get("price_open", 0.0)
+                pos_type = pos.get("type", 0)
+
+                if volume <= 0 or open_price <= 0:
+                    continue
+                side = "BUY" if pos_type == mt5.POSITION_TYPE_BUY else "SELL"
+                rung = self._attach_position_to_rung(
+                    symbol=symbol,
+                    state=state,
+                    side=side,
+                    open_price=open_price,
+                    volume=volume,
+                    ticket=ticket,
+                    grid_center=state.center,
+                    spacing=spacing,
+                    now_iso=now_iso,
+                    source="startup_adopt",
+                )
+                if rung:
+                    adopted += 1
+
+            if adopted:
+                self.alerter.custom(
+                    f"<b>ADOPTED</b> {symbol}\n"
+                    f"{adopted} orphaned position(s) from previous session\n"
+                    f"Exit orders will be placed to capture profit"
+                )
 
     def _pre_weekend_wind_down(self):
         """Pre-weekend protection: cancel entries and close stuck positions.
@@ -454,34 +681,28 @@ class GridEngine:
                     kept_count += 1
                 else:
                     # Far from TP — close at market to avoid weekend gap risk
-                    if rung.size <= 0:
-                        continue  # W1: skip if size is zero (bad state)
-                    side = "SELL" if rung.entry_side == "BUY" else "BUY"
-                    result = self.order_mgr.place_market(
-                        symbol, side, rung.size, "weekend_close"
+                    if rung.size <= 0 or not rung.order_ticket:
+                        continue
+                    close_side = "SELL" if rung.entry_side == "BUY" else "BUY"
+                    success = self.order_mgr.close_position_by_ticket(
+                        symbol, rung.order_ticket, rung.size, close_side,
+                        reason="weekend_close"
                     )
-                    if result and result.get("retcode") in (
-                        mt5.TRADE_RETCODE_DONE, 10010
-                    ):
-                        # Calculate realized loss
+                    if success:
+                        contract_sz = sym_info.get("trade_contract_size", 100000)
                         if rung.entry_side == "BUY":
-                            pnl = (mid - (rung.fill_price or mid)) * rung.size * 100000
+                            pnl = (mid - (rung.fill_price or mid)) * rung.size * contract_sz
                         else:
-                            pnl = ((rung.fill_price or mid) - mid) * rung.size * 100000
+                            pnl = ((rung.fill_price or mid) - mid) * rung.size * contract_sz
 
                         closed_pnl += pnl
                         closed_count += 1
-                        self.order_mgr.journal.log_safety(
-                            "WEEKEND_CLOSE",
-                            f"{symbol}: closed {rung.rung_id} {rung.entry_side} "
-                            f"{rung.size} lots, distance={distance:.1f} spacings, "
-                            f"pnl=${pnl:.2f}"
-                        )
 
-                        # Reset rung to ENTRY (position is now closed)
+                        # Reset rung to ENTRY
                         rung.state = "ENTRY"
                         rung.fill_price = None
                         rung.exit_price = None
+                        rung.order_ticket = None
                         rung.entry_price = state.center + rung.level_index * spacing
                     else:
                         log.warning(
@@ -603,6 +824,28 @@ class GridEngine:
                 save_state(self.states)
                 self.risk_mgr.clear_errors()
 
+                # ── Periodic status log (every 5 minutes) ────────────────
+                now_status = time.time()
+                if now_status - self._last_status_log_ts >= self._status_log_interval:
+                    for symbol in self._active_symbols:
+                        state = self.states.get(symbol)
+                        if state is None:
+                            continue
+                        tick = self.broker.symbol_tick(symbol)
+                        mid = (tick["bid"] + tick["ask"]) / 2.0 if tick else 0.0
+                        exit_count = sum(1 for r in state.rungs if r.state == "EXIT")
+                        entry_count = sum(1 for r in state.rungs if r.state == "ENTRY")
+                        equity = self.broker.account_equity()
+                        log.info(
+                            f"{symbol}: mid={mid:.5f} center={state.center:.5f} "
+                            f"spacing={state.spacing:.5f} "
+                            f"entries={entry_count} exits={exit_count} "
+                            f"inv={state.inventory_lots:+.3f} "
+                            f"fills={self._fill_count} pnl=${self._session_pnl:.2f} "
+                            f"equity=${equity:.2f}"
+                        )
+                    self._last_status_log_ts = now_status
+
             except ConnectionError:
                 log.error("MT5 connection lost and could not be restored")
                 self.risk_mgr.record_error()
@@ -680,8 +923,9 @@ class GridEngine:
             return
 
         # Inventory
+        positions = self.broker.our_positions(symbol)
         inventory_lots = 0.0
-        for pos in self.broker.our_positions(symbol):
+        for pos in positions:
             ptype = pos.get("type", mt5.POSITION_TYPE_BUY)
             sign = 1 if ptype == mt5.POSITION_TYPE_BUY else -1
             inventory_lots += sign * pos.get("volume", 0.0)
@@ -751,6 +995,11 @@ class GridEngine:
         elif abs(center - state.center) >= cfg.GRID_RESET_K * spacing:
             if (now - state.last_reset_ts) >= cfg.GRID_RESET_MIN_SECONDS:
                 reset_needed = True
+        if not reset_needed:
+            standard_rungs = [r for r in state.rungs if r.rung_id.startswith("L")]
+            max_level = max((abs(r.level_index) for r in standard_rungs), default=0)
+            if max_level != cfg.GRID_LEVELS:
+                reset_needed = True
 
         if reset_needed:
             state.center = center
@@ -758,8 +1007,17 @@ class GridEngine:
             state.spacing = spacing
             state.levels = cfg.GRID_LEVELS
             state.last_reset_ts = now
-            if not state.rungs:
+            # Check if standard grid rungs exist and match configured levels
+            standard_rungs = [r for r in state.rungs if r.rung_id.startswith("L")]
+            has_standard_rungs = len(standard_rungs) > 0
+            max_level = max((abs(r.level_index) for r in standard_rungs), default=0)
+            levels_match = max_level == cfg.GRID_LEVELS
+
+            if not has_standard_rungs or not levels_match:
+                # Build standard grid, preserving any adopted rungs (A0, A1, etc.)
+                adopted_rungs = [r for r in state.rungs if not r.rung_id.startswith("L")]
                 state.rungs = build_rungs(symbol, center, spacing, cfg.GRID_LEVELS)
+                state.rungs.extend(adopted_rungs)
             else:
                 for rung in state.rungs:
                     if rung.state == "ENTRY":
@@ -769,6 +1027,29 @@ class GridEngine:
             log.info(f"{symbol}: grid reset center={center:.5f} spacing={spacing:.5f}")
         else:
             state.anchor = anchor
+
+        # Adopt any open positions that are not yet attached to a rung
+        now_iso = datetime.now(timezone.utc).isoformat()
+        for pos in positions:
+            ticket = pos.get("ticket", 0)
+            volume = pos.get("volume", 0.0)
+            open_price = pos.get("price_open", 0.0)
+            pos_type = pos.get("type", mt5.POSITION_TYPE_BUY)
+            if volume <= 0 or open_price <= 0:
+                continue
+            side = "BUY" if pos_type == mt5.POSITION_TYPE_BUY else "SELL"
+            self._attach_position_to_rung(
+                symbol=symbol,
+                state=state,
+                side=side,
+                open_price=open_price,
+                volume=volume,
+                ticket=ticket,
+                grid_center=grid_center,
+                spacing=grid_spacing,
+                now_iso=now_iso,
+                source="runtime_adopt",
+            )
 
         # Edge check
         edge_ok = grid_spacing - cost_floor >= cfg.EDGE_MIN_TICKS * tick_size
@@ -801,27 +1082,252 @@ class GridEngine:
             )
             entry_sizes[rung.rung_id] = size
 
-        # Fills
-        fills = self.order_mgr.detect_fills(symbol, state.last_deal_time)
+        # Fills — two types: ENTRY fills (new positions) and EXIT fills (TP closes)
+        fills = self.order_mgr.detect_fills(
+            symbol, state.last_deal_time, state.grid_id, state.last_deal_id
+        )
         if fills:
             equity = self.broker.account_equity()
             latest_time = state.last_deal_time
+            latest_deal_id = state.last_deal_id
             for fill in fills:
-                rung = next(
-                    (r for r in state.rungs if r.rung_id == fill.rung_id), None
+                if fill.deal_entry == 0:
+                    # ── ENTRY FILL: limit order filled, position opened ──
+                    rung = None
+                    if fill.rung_id:
+                        rung = next(
+                            (r for r in state.rungs if r.rung_id == fill.rung_id),
+                            None,
+                        )
+                    if not rung and fill.position_ticket:
+                        rung = next(
+                            (r for r in state.rungs
+                             if r.order_ticket == fill.position_ticket),
+                            None,
+                        )
+                    if rung and rung.state == "EXIT" and fill.position_ticket:
+                        if rung.order_ticket == fill.position_ticket:
+                            # Duplicate deal for same position — ignore
+                            latest_time = max(latest_time, fill.time_iso)
+                            latest_deal_id = max(latest_deal_id, fill.deal_id)
+                            continue
+
+                    if not rung or rung.state == "EXIT":
+                        rung = self._attach_position_to_rung(
+                            symbol=symbol,
+                            state=state,
+                            side=fill.side,
+                            open_price=fill.price,
+                            volume=fill.volume,
+                            ticket=fill.position_ticket,
+                            grid_center=grid_center,
+                            spacing=grid_spacing,
+                            now_iso=fill.time_iso,
+                            source="fill_adopt",
+                        )
+
+                    if not rung:
+                        latest_time = max(latest_time, fill.time_iso)
+                        latest_deal_id = max(latest_deal_id, fill.deal_id)
+                        continue
+
+                    if rung.state == "ENTRY":
+                        update_rung_on_fill(rung, fill.price, grid_spacing, fill.time_iso)
+
+                    if rung.state == "EXIT":
+                        rung.size = fill.volume
+                        # Find the position ticket for this fill
+                        pos_ticket = fill.position_ticket or rung.order_ticket
+                        if not pos_ticket:
+                            # Fallback: find from broker positions
+                            for p in positions:
+                                if abs(p.get("price_open", 0) - fill.price) < grid_spacing * 0.3:
+                                    if abs(p.get("volume", 0) - fill.volume) < 0.015:
+                                        pos_ticket = p.get("ticket", 0)
+                                        break
+                        rung.order_ticket = pos_ticket
+                        # Set T/P on the position
+                        if pos_ticket and rung.exit_price:
+                            self.order_mgr.set_exit_tp(
+                                symbol, pos_ticket, rung.exit_price
+                            )
+
+                    latest_time = max(latest_time, fill.time_iso)
+                    latest_deal_id = max(latest_deal_id, fill.deal_id)
+                    self.order_mgr.journal.log_fill(
+                        fill, equity=equity, inventory_lots=inventory_lots
+                    )
+                    self._fill_count += 1
+                    log.info(
+                        f"{symbol}: ENTRY FILL {fill.side} {fill.volume} lots "
+                        f"at {fill.price:.5f} [{rung.rung_id}] "
+                        f"pos=#{rung.order_ticket} exit_tp={rung.exit_price} "
+                        f"inv={inventory_lots:+.3f}"
+                    )
+                    self.alerter.custom(
+                        f"<b>ENTRY</b> {symbol}\n"
+                        f"{fill.side} {fill.volume} lots at {fill.price:.5f}\n"
+                        f"TP set at {rung.exit_price:.5f}\n"
+                        f"Equity: ${equity:,.2f}"
+                    )
+
+                elif fill.deal_entry == 1:
+                    # ── EXIT FILL: position closed at TP ──
+                    # Find the rung by rung_id (from comment) or position_ticket
+                    rung = None
+                    if fill.rung_id:
+                        rung = next(
+                            (r for r in state.rungs if r.rung_id == fill.rung_id),
+                            None,
+                        )
+                    if not rung and fill.position_ticket:
+                        rung = next(
+                            (r for r in state.rungs
+                             if r.state == "EXIT"
+                             and r.order_ticket == fill.position_ticket),
+                            None,
+                        )
+                    if not rung:
+                        # Try matching by price
+                        rung = next(
+                            (r for r in state.rungs
+                             if r.state == "EXIT"
+                             and r.exit_price
+                             and abs(r.exit_price - fill.price) < grid_spacing * 0.5),
+                            None,
+                        )
+                    if not rung:
+                        continue
+
+                    fill_vol = fill.volume if fill.volume > 0 else rung.size
+                    # Calculate profit for the filled volume
+                    if rung.entry_side == "BUY":
+                        pnl = (fill.price - (rung.fill_price or 0)) * fill_vol * contract_size
+                    else:
+                        pnl = ((rung.fill_price or 0) - fill.price) * fill_vol * contract_size
+                    self._session_pnl += pnl
+
+                    # Partial close: reduce size, keep EXIT state
+                    if fill_vol < max(0.0, rung.size - 1e-4):
+                        rung.size = max(0.0, rung.size - fill_vol)
+                        rung.last_update = fill.time_iso
+                        log.info(
+                            f"{symbol}: PARTIAL EXIT {fill.side} {fill_vol} lots "
+                            f"at {fill.price:.5f} [{rung.rung_id}] "
+                            f"remaining={rung.size:.3f} pnl=${pnl:.2f}"
+                        )
+                    else:
+                        # Reset rung to ENTRY
+                        rung.state = "ENTRY"
+                        rung.entry_price = grid_center + rung.level_index * grid_spacing
+                        rung.fill_price = None
+                        rung.exit_price = None
+                        rung.order_ticket = None
+                        rung.last_update = fill.time_iso
+
+                    latest_time = max(latest_time, fill.time_iso)
+                    latest_deal_id = max(latest_deal_id, fill.deal_id)
+                    self.order_mgr.journal.log_fill(
+                        fill, equity=equity, inventory_lots=inventory_lots
+                    )
+                    self._fill_count += 1
+                    log.info(
+                        f"{symbol}: EXIT FILL (TP) {fill.side} {fill.volume} lots "
+                        f"at {fill.price:.5f} [{rung.rung_id}] "
+                        f"pnl=${pnl:.2f} inv={inventory_lots:+.3f}"
+                    )
+                    self.alerter.custom(
+                        f"<b>PROFIT</b> {symbol}\n"
+                        f"Closed at {fill.price:.5f}\n"
+                        f"P/L: ${pnl:+.2f}\n"
+                        f"Equity: ${equity:,.2f}"
+                    )
+
+            state.last_deal_time = latest_time
+            state.last_deal_id = latest_deal_id
+
+        # Ensure TP is set for all EXIT rungs (hedging safety net)
+        positions_by_ticket = {
+            p.get("ticket", 0): p for p in positions if p.get("ticket", 0)
+        }
+        for rung in state.rungs:
+            if rung.state != "EXIT" or not rung.order_ticket:
+                continue
+            pos = positions_by_ticket.get(rung.order_ticket)
+            if not pos:
+                continue
+            if rung.exit_price is None and rung.fill_price is not None:
+                if rung.entry_side == "BUY":
+                    rung.exit_price = rung.fill_price + grid_spacing
+                else:
+                    rung.exit_price = rung.fill_price - grid_spacing
+            if rung.exit_price is None:
+                continue
+            current_tp = pos.get("tp", 0.0)
+            if current_tp <= 0 or abs(current_tp - rung.exit_price) > tick_size * 0.5:
+                self.order_mgr.set_exit_tp(
+                    symbol, rung.order_ticket, rung.exit_price
                 )
-                if not rung:
+
+        # If a position vanished but no deal was captured, infer a TP close.
+        missing_tickets = {
+            r.order_ticket
+            for r in state.rungs
+            if r.state == "EXIT" and r.order_ticket
+        } - set(positions_by_ticket.keys())
+        if missing_tickets:
+            equity = self.broker.account_equity()
+            now_iso = datetime.now(timezone.utc).isoformat()
+            for rung in state.rungs:
+                if rung.state != "EXIT" or not rung.order_ticket:
                     continue
-                update_rung_on_fill(rung, fill.price, grid_spacing, fill.time_iso)
-                if rung.state == "EXIT":
-                    rung.size = fill.volume
-                if rung.state == "ENTRY":
-                    rung.entry_price = grid_center + rung.level_index * grid_spacing
-                latest_time = max(latest_time, fill.time_iso)
+                if rung.order_ticket not in missing_tickets:
+                    continue
+                fill_price = rung.exit_price or mid
+                fill_vol = rung.size
+                if fill_vol <= 0:
+                    continue
+                if rung.entry_side == "BUY":
+                    pnl = (fill_price - (rung.fill_price or 0)) * fill_vol * contract_size
+                    close_side = "SELL"
+                else:
+                    pnl = ((rung.fill_price or 0) - fill_price) * fill_vol * contract_size
+                    close_side = "BUY"
+                self._session_pnl += pnl
+                fill = FillEvent(
+                    symbol=symbol,
+                    side=close_side,
+                    price=fill_price,
+                    volume=fill_vol,
+                    order_ticket=0,
+                    comment="inferred_close",
+                    time_iso=now_iso,
+                    rung_id=rung.rung_id,
+                    state="EXIT",
+                    deal_entry=1,
+                    position_ticket=rung.order_ticket or 0,
+                    deal_id=0,
+                )
                 self.order_mgr.journal.log_fill(
                     fill, equity=equity, inventory_lots=inventory_lots
                 )
-            state.last_deal_time = latest_time
+                self._fill_count += 1
+                log.info(
+                    f"{symbol}: EXIT FILL (inferred) {close_side} {fill_vol} lots "
+                    f"at {fill_price:.5f} [{rung.rung_id}] pnl=${pnl:.2f}"
+                )
+                self.alerter.custom(
+                    f"<b>PROFIT</b> {symbol}\n"
+                    f"Closed (inferred) at {fill_price:.5f}\n"
+                    f"P/L: ${pnl:+.2f}\n"
+                    f"Equity: ${equity:,.2f}"
+                )
+                rung.state = "ENTRY"
+                rung.entry_price = grid_center + rung.level_index * grid_spacing
+                rung.fill_price = None
+                rung.exit_price = None
+                rung.order_ticket = None
+                rung.last_update = now_iso
 
         # Desired orders (C1: pass vol_min to skip sub-minimum orders)
         vol_min = sym_info.get("volume_min", 0.01)
@@ -834,7 +1340,7 @@ class GridEngine:
             vol_min=vol_min,
         )
 
-        # Unwind if halted
+        # Unwind if halted — close all positions by ticket on hedging account
         if risk_status.halted:
             limit_orders = int(self.account_model.get("limit_orders", 0) or 0)
             max_pending = (
@@ -842,6 +1348,7 @@ class GridEngine:
                 if limit_orders > 0
                 else cfg.MAX_PENDING_ORDERS_PER_SYMBOL
             )
+            # Cancel all pending entry orders
             self.order_mgr.sync_orders(
                 symbol=symbol,
                 desired=[],
@@ -851,8 +1358,18 @@ class GridEngine:
                 max_pending=max_pending,
                 current_price=mid,
             )
-            if abs(inventory_lots) > 0:
-                self.order_mgr.unwind_position(symbol, inventory_lots)
+            # Close each open position by its ticket
+            for rung in state.rungs:
+                if rung.state == "EXIT" and rung.order_ticket and rung.size > 0:
+                    close_side = "SELL" if rung.entry_side == "BUY" else "BUY"
+                    self.order_mgr.close_position_by_ticket(
+                        symbol, rung.order_ticket, rung.size, close_side,
+                        reason="risk_halt"
+                    )
+                    rung.state = "ENTRY"
+                    rung.fill_price = None
+                    rung.exit_price = None
+                    rung.order_ticket = None
             return
 
         # Sync orders at cadence

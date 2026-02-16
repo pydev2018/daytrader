@@ -104,12 +104,13 @@ def desired_orders(
     vol_min: float = 0.01,
 ) -> list[OrderSpec]:
     """
-    Build desired orders from rungs. entry_sizes maps rung_id -> size for ENTRY.
-    EXIT orders use rung.size (size at fill).
+    Build desired ENTRY orders from rungs.
 
-    Fix C1: Orders with volume below vol_min are skipped entirely rather than
-    being sent to normalize_volume which would clamp them UP to vol_min,
-    silently over-sizing by 10-20x.
+    EXIT orders are no longer generated here. On hedging accounts,
+    exits are handled by setting T/P directly on the position via
+    TRADE_ACTION_SLTP. MT5 closes the position automatically.
+
+    Fix C1: Orders with volume below vol_min are skipped entirely.
     """
     orders: list[OrderSpec] = []
     for rung in rungs:
@@ -133,20 +134,5 @@ def desired_orders(
                     state="ENTRY",
                 )
             )
-        else:
-            if rung.exit_price is None or rung.size <= 0:
-                continue
-            side = "SELL" if rung.entry_side == "BUY" else "BUY"
-            comment = make_comment(grid_id, rung.rung_id, "EXIT")
-            orders.append(
-                OrderSpec(
-                    symbol=symbol,
-                    side=side,
-                    price=rung.exit_price,
-                    volume=rung.size,
-                    comment=comment,
-                    rung_id=rung.rung_id,
-                    state="EXIT",
-                )
-            )
+        # EXIT rungs: no orders generated. TP is set on the position itself.
     return orders

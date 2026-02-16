@@ -112,19 +112,22 @@ class TestDesiredOrders:
         orders = desired_orders("EURUSD", "abc", rungs, sizes, allow_entries=False)
         assert len(orders) == 0  # All are ENTRY, none pass
 
-    def test_exit_orders_pass_through(self):
-        """EXIT rungs should always generate orders regardless of allow_entries."""
+    def test_exit_rungs_no_orders(self):
+        """EXIT rungs should NOT generate orders — TP is set on the position.
+
+        On hedging accounts, exits are handled by setting T/P directly
+        on the position via TRADE_ACTION_SLTP. desired_orders only
+        generates ENTRY orders.
+        """
         rungs = build_rungs("EURUSD", 1.10000, 0.00010, 1)
-        # Fill the first rung
         rung = rungs[0]
         update_rung_on_fill(rung, rung.entry_price, 0.00010, "2025-01-01T00:00:00")
         rung.size = 0.01
 
         sizes = {r.rung_id: 0.01 for r in rungs}
         orders = desired_orders("EURUSD", "abc", rungs, sizes, allow_entries=False)
-        # Should have 1 exit order (from the filled rung)
-        assert len(orders) == 1
-        assert orders[0].state == "EXIT"
+        # Zero orders — EXIT rungs don't generate orders anymore
+        assert len(orders) == 0
 
     def test_zero_size_skipped(self):
         rungs = build_rungs("EURUSD", 1.10000, 0.00010, 2)

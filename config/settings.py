@@ -165,6 +165,12 @@ def _validate():
         errors.append(f"GRID_LEVELS must be >= 1 (got {GRID_LEVELS})")
     if GRID_LEVELS > 50:
         errors.append(f"GRID_LEVELS > 50 is excessive (got {GRID_LEVELS})")
+    if GRID_RESET_K <= 0:
+        errors.append(f"GRID_RESET_K must be > 0 (got {GRID_RESET_K})")
+    if GRID_RESET_MIN_SECONDS < 0:
+        errors.append(
+            f"GRID_RESET_MIN_SECONDS must be >= 0 (got {GRID_RESET_MIN_SECONDS})"
+        )
     if BASE_ORDER_SIZE_LOTS <= 0:
         errors.append(f"BASE_ORDER_SIZE_LOTS must be > 0 (got {BASE_ORDER_SIZE_LOTS})")
     if MAX_INVENTORY_LOTS <= 0:
@@ -181,16 +187,56 @@ def _validate():
         errors.append(f"GRID_SPACING_K_SIGMA must be > 0 (got {GRID_SPACING_K_SIGMA})")
     if GRID_SPACING_K_COST < 1.0:
         errors.append(f"GRID_SPACING_K_COST must be >= 1.0 to survive costs (got {GRID_SPACING_K_COST})")
+    if GRID_SPACING_MIN_TICKS < 1:
+        errors.append(f"GRID_SPACING_MIN_TICKS must be >= 1 (got {GRID_SPACING_MIN_TICKS})")
+    if EDGE_MIN_TICKS < 0:
+        errors.append(f"EDGE_MIN_TICKS must be >= 0 (got {EDGE_MIN_TICKS})")
     if VOL_EWMA_LAMBDA <= 0 or VOL_EWMA_LAMBDA >= 1.0:
         errors.append(f"VOL_EWMA_LAMBDA must be in (0, 1) (got {VOL_EWMA_LAMBDA})")
     if ANCHOR_HALFLIFE_SECONDS < 1:
         errors.append(f"ANCHOR_HALFLIFE_SECONDS must be >= 1 (got {ANCHOR_HALFLIFE_SECONDS})")
+    if VOL_HORIZON_SECONDS < 1:
+        errors.append(f"VOL_HORIZON_SECONDS must be >= 1 (got {VOL_HORIZON_SECONDS})")
     if GRID_LOOP_SECONDS < 0.1:
         errors.append(f"GRID_LOOP_SECONDS must be >= 0.1 (got {GRID_LOOP_SECONDS})")
+    if ORDER_REFRESH_SECONDS < 0.1:
+        errors.append(
+            f"ORDER_REFRESH_SECONDS must be >= 0.1 (got {ORDER_REFRESH_SECONDS})"
+        )
+    if REQUOTE_THRESHOLD_TICKS < 0:
+        errors.append(
+            f"REQUOTE_THRESHOLD_TICKS must be >= 0 (got {REQUOTE_THRESHOLD_TICKS})"
+        )
+    if MAX_PENDING_ORDERS_PER_SYMBOL < 1:
+        errors.append(
+            f"MAX_PENDING_ORDERS_PER_SYMBOL must be >= 1 (got {MAX_PENDING_ORDERS_PER_SYMBOL})"
+        )
     if INVENTORY_SKEW_GAMMA < 0:
         errors.append(f"INVENTORY_SKEW_GAMMA must be >= 0 (got {INVENTORY_SKEW_GAMMA})")
     if SIZE_TAPER_ETA < 0:
         errors.append(f"SIZE_TAPER_ETA must be >= 0 (got {SIZE_TAPER_ETA})")
+    if RUNG_STOP_LOSS_SPACINGS < 0:
+        errors.append(
+            f"RUNG_STOP_LOSS_SPACINGS must be >= 0 (got {RUNG_STOP_LOSS_SPACINGS})"
+        )
+    if WEEKEND_CLOSE_THRESHOLD_SPACINGS < 0:
+        errors.append(
+            f"WEEKEND_CLOSE_THRESHOLD_SPACINGS must be >= 0 "
+            f"(got {WEEKEND_CLOSE_THRESHOLD_SPACINGS})"
+        )
+    if AUTO_SCAN_ENABLED:
+        if SCAN_INTERVAL_SECONDS < 60:
+            errors.append(
+                f"SCAN_INTERVAL_SECONDS must be >= 60 (got {SCAN_INTERVAL_SECONDS})"
+            )
+        if SCAN_BAR_COUNT < 50:
+            errors.append(f"SCAN_BAR_COUNT must be >= 50 (got {SCAN_BAR_COUNT})")
+        if MAX_ACTIVE_SYMBOLS < 1:
+            errors.append(f"MAX_ACTIVE_SYMBOLS must be >= 1 (got {MAX_ACTIVE_SYMBOLS})")
+        if MIN_SCAN_SCORE < 0 or MIN_SCAN_SCORE > 100:
+            errors.append(
+                f"MIN_SCAN_SCORE must be in [0, 100] (got {MIN_SCAN_SCORE})"
+            )
     if not GRID_SYMBOLS:
         errors.append("GRID_SYMBOLS must have at least one symbol")
 

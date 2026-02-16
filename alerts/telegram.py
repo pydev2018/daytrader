@@ -10,6 +10,7 @@
 """
 
 import time
+import threading
 from concurrent.futures import ThreadPoolExecutor
 
 import requests
@@ -28,6 +29,8 @@ class TelegramAlerter:
 
     # Minimum interval between consecutive sends (rate-limit guard)
     _MIN_SEND_INTERVAL = 0.5  # seconds
+    # Maximum queued messages before dropping
+    _MAX_PENDING = 100
 
     def __init__(self, bot_token: str = "", chat_id: str = ""):
         self.chat_id = chat_id
@@ -49,6 +52,8 @@ class TelegramAlerter:
             logger.info("Telegram alerts disabled (no token/chat_id)")
 
         self._last_send_time: float = 0.0
+        self._pending: int = 0
+        self._pending_lock = threading.Lock()
 
     # =========================================================================
     # INTERNAL SEND (runs on background thread)
@@ -58,7 +63,17 @@ class TelegramAlerter:
         """Queue a message for async delivery. Never blocks the caller."""
         if not self.enabled or self._executor is None:
             return
-        self._executor.submit(self._do_send, text)
+        with self._pending_lock:
+            if self._pending >= self._MAX_PENDING:
+                logger.warning("Telegram queue full — dropping alert")
+                return
+            self._pending += 1
+        future = self._executor.submit(self._do_send, text)
+        future.add_done_callback(self._on_done)
+
+    def _on_done(self, _future):
+        with self._pending_lock:
+            self._pending = max(0, self._pending - 1)
 
     def _do_send(self, text: str, retries: int = 1):
         """Actual HTTP send — runs on the background thread."""
