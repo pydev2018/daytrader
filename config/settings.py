@@ -123,6 +123,9 @@ SCAN_UNIVERSE: list[str] = [s.strip() for s in _scan_universe_raw.split(",") if 
 SPREAD_PAUSE_MULT: float = float(os.getenv("SPREAD_PAUSE_MULT", "3.0"))
 VOL_SHOCK_RATIO: float = float(os.getenv("VOL_SHOCK_RATIO", "2.0"))
 TREND_SLOPE_Z: float = float(os.getenv("TREND_SLOPE_Z", "2.0"))
+TREND_HARD_PAUSE_MULT: float = float(os.getenv("TREND_HARD_PAUSE_MULT", "1.5"))
+TREND_CONFIRM_BARS: int = int(os.getenv("TREND_CONFIRM_BARS", "3"))
+RANGE_CONFIRM_BARS: int = int(os.getenv("RANGE_CONFIRM_BARS", "6"))
 
 # ═════════════════════════════════════════════════════════════════════════════
 #  RISK LIMITS
@@ -133,6 +136,7 @@ DAILY_LOSS_LIMIT_PCT: float = float(os.getenv("DAILY_LOSS_LIMIT_PCT", "3.0"))
 WEEKLY_LOSS_LIMIT_PCT: float = float(os.getenv("WEEKLY_LOSS_LIMIT_PCT", "6.0"))
 MAX_INVENTORY_LOTS: float = float(os.getenv("MAX_INVENTORY_LOTS", "1.0"))
 MAX_NOTIONAL_MULT_EQUITY: float = float(os.getenv("MAX_NOTIONAL_MULT_EQUITY", "3.0"))
+STOP_LOSS_COOLDOWN_SECONDS: int = int(os.getenv("STOP_LOSS_COOLDOWN_SECONDS", "600"))
 
 # ═════════════════════════════════════════════════════════════════════════════
 #  BACKTEST-SPECIFIC (used only by backtest engines)
@@ -223,6 +227,23 @@ def _validate():
         errors.append(
             f"WEEKEND_CLOSE_THRESHOLD_SPACINGS must be >= 0 "
             f"(got {WEEKEND_CLOSE_THRESHOLD_SPACINGS})"
+        )
+    if TREND_HARD_PAUSE_MULT < 1.0:
+        errors.append(
+            f"TREND_HARD_PAUSE_MULT must be >= 1.0 (got {TREND_HARD_PAUSE_MULT})"
+        )
+    if TREND_CONFIRM_BARS < 1:
+        errors.append(
+            f"TREND_CONFIRM_BARS must be >= 1 (got {TREND_CONFIRM_BARS})"
+        )
+    if RANGE_CONFIRM_BARS < 1:
+        errors.append(
+            f"RANGE_CONFIRM_BARS must be >= 1 (got {RANGE_CONFIRM_BARS})"
+        )
+    if STOP_LOSS_COOLDOWN_SECONDS < 0:
+        errors.append(
+            f"STOP_LOSS_COOLDOWN_SECONDS must be >= 0 "
+            f"(got {STOP_LOSS_COOLDOWN_SECONDS})"
         )
     if AUTO_SCAN_ENABLED:
         if SCAN_INTERVAL_SECONDS < 60:

@@ -32,7 +32,7 @@ from config import settings as cfg
 from execution.order_manager import OrderManager, FillEvent
 from grid.anchor import EmaAnchor
 from grid.orders import build_rungs, desired_orders, update_rung_on_fill
-from grid.regime import classify_regime, compute_trend_z
+from grid.regime import classify_regime, compute_trend_z, TrendRegimeFilter
 from grid.scanner import GridScanner, FX_UNIVERSE, SymbolScore
 from grid.sizing import size_for_rung
 from grid.spacing import VolEstimator, compute_spacing
@@ -120,6 +120,7 @@ class GridEngine:
         self.vol_slow: dict[str, VolEstimator] = {}
         self.price_history: dict[str, deque] = {}
         self.spread_history: dict[str, deque] = {}
+        self.trend_filters: dict[str, TrendRegimeFilter] = {}
         self.last_sync: dict[str, float] = {}
         self.account_model: dict[str, object] = {}
 
@@ -133,6 +134,7 @@ class GridEngine:
         self._status_log_interval: float = 300.0  # every 5 minutes
         self._fill_count: int = 0
         self._session_pnl: float = 0.0
+        self._entry_pause_until: dict[str, float] = {}
 
     def start(self):
         log.info("=" * 70)
@@ -758,6 +760,12 @@ class GridEngine:
             )
             self.price_history[symbol] = deque(maxlen=HISTORY_LEN)
             self.spread_history[symbol] = deque(maxlen=HISTORY_LEN)
+            self.trend_filters[symbol] = TrendRegimeFilter(
+                trend_thresh=cfg.TREND_SLOPE_Z,
+                trend_pause_mult=cfg.TREND_HARD_PAUSE_MULT,
+                trend_confirm_bars=cfg.TREND_CONFIRM_BARS,
+                range_confirm_bars=cfg.RANGE_CONFIRM_BARS,
+            )
             self.last_sync[symbol] = 0.0
 
     # =====================================================================
@@ -799,6 +807,12 @@ class GridEngine:
                         )
                         self.price_history[symbol] = deque(maxlen=HISTORY_LEN)
                         self.spread_history[symbol] = deque(maxlen=HISTORY_LEN)
+                        self.trend_filters[symbol] = TrendRegimeFilter(
+                            trend_thresh=cfg.TREND_SLOPE_Z,
+                            trend_pause_mult=cfg.TREND_HARD_PAUSE_MULT,
+                            trend_confirm_bars=cfg.TREND_CONFIRM_BARS,
+                            range_confirm_bars=cfg.RANGE_CONFIRM_BARS,
+                        )
                     _market_was_closed = False
 
                 # ── Pre-weekend wind down (Friday after 21:00 UTC) ───────
@@ -953,7 +967,31 @@ class GridEngine:
             trend_thresh=cfg.TREND_SLOPE_Z,
             vol_thresh=cfg.VOL_SHOCK_RATIO,
             spread_thresh=cfg.SPREAD_PAUSE_MULT,
+            trend_pause_mult=cfg.TREND_HARD_PAUSE_MULT,
         )
+
+        trend_filter = self.trend_filters.get(symbol)
+        if trend_filter is None:
+            trend_filter = TrendRegimeFilter(
+                trend_thresh=cfg.TREND_SLOPE_Z,
+                trend_pause_mult=cfg.TREND_HARD_PAUSE_MULT,
+                trend_confirm_bars=cfg.TREND_CONFIRM_BARS,
+                range_confirm_bars=cfg.RANGE_CONFIRM_BARS,
+            )
+            self.trend_filters[symbol] = trend_filter
+        trend_state = trend_filter.update(
+            prices=list(prices),
+            vol_ratio=vol_ratio,
+            spread_ratio=spread_ratio,
+            spread_thresh=cfg.SPREAD_PAUSE_MULT,
+            vol_thresh=cfg.VOL_SHOCK_RATIO,
+        )
+        if trend_state.regime == "TREND" and regime.mode != "PAUSED":
+            regime.mode = "PAUSED"
+            regime.reason = "trend_model"
+        elif trend_state.regime == "RANGE" and regime.mode == "PAUSED" and regime.reason == "trend_model":
+            regime.mode = "CAUTION" if abs(trend_z) >= cfg.TREND_SLOPE_Z else "ACTIVE"
+            regime.reason = "trend" if regime.mode == "CAUTION" else ""
 
         # Risk checks
         # H5: Guard against missing contract_size — default 1.0 would make
@@ -1051,9 +1089,16 @@ class GridEngine:
                 source="runtime_adopt",
             )
 
+        entry_cooldown_active = now < self._entry_pause_until.get(symbol, 0.0)
+
         # Edge check
         edge_ok = grid_spacing - cost_floor >= cfg.EDGE_MIN_TICKS * tick_size
-        allow_entries = not state.paused and edge_ok and not block_entries
+        allow_entries = (
+            not state.paused
+            and edge_ok
+            and not block_entries
+            and not entry_cooldown_active
+        )
 
         # Size adjustments
         size_multiplier = risk_status.risk_multiplier
@@ -1269,6 +1314,71 @@ class GridEngine:
                     symbol, rung.order_ticket, rung.exit_price
                 )
 
+        if cfg.RUNG_STOP_LOSS_SPACINGS > 0:
+            now_iso = datetime.now(timezone.utc).isoformat()
+            stop_hits = 0
+            stop_pnl = 0.0
+            for rung in state.rungs:
+                if (
+                    rung.state != "EXIT"
+                    or rung.fill_price is None
+                    or rung.order_ticket is None
+                    or rung.size <= 0
+                ):
+                    continue
+                if rung.order_ticket not in positions_by_ticket:
+                    continue
+
+                if rung.entry_side == "BUY":
+                    stop_price = rung.fill_price - cfg.RUNG_STOP_LOSS_SPACINGS * grid_spacing
+                    stop_hit = bid <= stop_price
+                    close_side = "SELL"
+                    pnl = (stop_price - rung.fill_price) * rung.size * contract_size
+                else:
+                    stop_price = rung.fill_price + cfg.RUNG_STOP_LOSS_SPACINGS * grid_spacing
+                    stop_hit = ask >= stop_price
+                    close_side = "BUY"
+                    pnl = (rung.fill_price - stop_price) * rung.size * contract_size
+
+                if not stop_hit:
+                    continue
+
+                closed = self.order_mgr.close_position_by_ticket(
+                    symbol,
+                    rung.order_ticket,
+                    rung.size,
+                    close_side,
+                    reason="rung_stop",
+                )
+                if not closed:
+                    continue
+
+                stop_hits += 1
+                stop_pnl += pnl
+                self._session_pnl += pnl
+                log.warning(
+                    f"{symbol}: STOP LOSS {close_side} {rung.size} lots at "
+                    f"{stop_price:.5f} [{rung.rung_id}] pnl=${pnl:.2f}"
+                )
+
+                rung.state = "ENTRY"
+                rung.entry_price = grid_center + rung.level_index * grid_spacing
+                rung.fill_price = None
+                rung.exit_price = None
+                rung.order_ticket = None
+                rung.last_update = now_iso
+
+            if stop_hits > 0:
+                cooldown_until = time.time() + cfg.STOP_LOSS_COOLDOWN_SECONDS
+                self._entry_pause_until[symbol] = cooldown_until
+                state.paused = True
+                state.pause_reason = "stop_loss_cooldown"
+                self.alerter.custom(
+                    f"<b>STOP LOSS</b> {symbol}\n"
+                    f"Closed {stop_hits} rung(s), P/L: ${stop_pnl:+.2f}\n"
+                    f"Entries paused for {cfg.STOP_LOSS_COOLDOWN_SECONDS}s"
+                )
+
         # If a position vanished but no deal was captured, infer a TP close.
         missing_tickets = {
             r.order_ticket
@@ -1278,6 +1388,7 @@ class GridEngine:
         if missing_tickets:
             equity = self.broker.account_equity()
             now_iso = datetime.now(timezone.utc).isoformat()
+            inferred_count = 0
             for rung in state.rungs:
                 if rung.state != "EXIT" or not rung.order_ticket:
                     continue
@@ -1328,6 +1439,9 @@ class GridEngine:
                 rung.exit_price = None
                 rung.order_ticket = None
                 rung.last_update = now_iso
+                inferred_count += 1
+            if inferred_count > 0 and now_iso > state.last_deal_time:
+                state.last_deal_time = now_iso
 
         # Desired orders (C1: pass vol_min to skip sub-minimum orders)
         vol_min = sym_info.get("volume_min", 0.01)

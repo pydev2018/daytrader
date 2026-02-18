@@ -453,6 +453,15 @@ class OrderManager:
             # Skip non-grid deals (unwind, weekend close, manual)
             parsed = parse_comment(comment)
             if not parsed:
+                normalized_comment = (comment or "").strip().lower()
+                if normalized_comment and not normalized_comment.startswith("g"):
+                    if any(
+                        marker in normalized_comment
+                        for marker in ("grid_close", "weekend_close", "risk_halt", "unwind")
+                    ):
+                        continue
+                    if deal_entry == 1:
+                        continue
                 # MT5 may return empty comments on deals.
                 # For OUT deals, we still emit a fill to match by position_id.
                 # For IN deals, we also emit a fill so the engine can adopt

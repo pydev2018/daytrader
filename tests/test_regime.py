@@ -5,7 +5,12 @@ Tests for grid/regime.py — regime detection and classification.
 import math
 import pytest
 
-from grid.regime import compute_trend_z, classify_regime, RegimeState
+from grid.regime import (
+    compute_trend_z,
+    classify_regime,
+    RegimeState,
+    TrendRegimeFilter,
+)
 
 
 class TestComputeTrendZ:
@@ -80,3 +85,68 @@ class TestClassifyRegime:
         )
         assert r.mode == "PAUSED"
         assert r.reason == "spread"
+
+    def test_paused_hard_trend(self):
+        """Very strong trend should escalate from CAUTION to PAUSED."""
+        r = classify_regime(
+            trend_z=3.2, vol_ratio=1.0, spread_ratio=1.0,
+            trend_thresh=2.0, vol_thresh=2.0, spread_thresh=3.0,
+            trend_pause_mult=1.5,
+        )
+        assert r.mode == "PAUSED"
+        assert r.reason == "trend_hard"
+
+
+class TestTrendRegimeFilter:
+    def test_enters_trend_after_confirmed_signal(self):
+        filt = TrendRegimeFilter(
+            trend_thresh=2.0,
+            trend_pause_mult=1.5,
+            trend_confirm_bars=3,
+            range_confirm_bars=6,
+        )
+        prices = [1.10000 + i * 0.00025 for i in range(140)]
+        state = None
+        for _ in range(5):
+            state = filt.update(
+                prices=prices,
+                vol_ratio=1.2,
+                spread_ratio=1.0,
+                spread_thresh=3.0,
+                vol_thresh=2.0,
+            )
+        assert state is not None
+        assert state.regime == "TREND"
+        assert state.trend_score > 0.6
+
+    def test_returns_to_range_after_persistence(self):
+        filt = TrendRegimeFilter(
+            trend_thresh=2.0,
+            trend_pause_mult=1.5,
+            trend_confirm_bars=2,
+            range_confirm_bars=3,
+        )
+        trend_prices = [1.10000 + i * 0.00025 for i in range(140)]
+        for _ in range(3):
+            filt.update(
+                prices=trend_prices,
+                vol_ratio=1.2,
+                spread_ratio=1.0,
+                spread_thresh=3.0,
+                vol_thresh=2.0,
+            )
+
+        # Flat/ranging block repeated enough times to satisfy re-arm hysteresis.
+        range_prices = [1.10000 + ((-1) ** i) * 0.00001 for i in range(140)]
+        state = None
+        for _ in range(5):
+            state = filt.update(
+                prices=range_prices,
+                vol_ratio=1.0,
+                spread_ratio=1.0,
+                spread_thresh=3.0,
+                vol_thresh=2.0,
+            )
+
+        assert state is not None
+        assert state.regime == "RANGE"
