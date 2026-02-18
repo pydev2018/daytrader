@@ -6809,3 +6809,9 @@
 {"event": "safety", "ts": "2026-02-17T15:45:12.267571+00:00", "type": "POSITION_CLOSED", "details": "EURCHF: #33719949 BUY 0.9 lots (risk_halt)"}
 {"event": "order_placed", "ts": "2026-02-17T15:45:13.951763+00:00", "symbol": "EURCHF", "side": "BUY", "price": 0.9128109033526001, "volume": 0.9, "comment": "geb339a:L-1:E", "rung_id": "L-1", "state": "ENTRY", "ticket": 33734770}
 {"event": "order_placed", "ts": "2026-02-17T15:46:45.964202+00:00", "symbol": "EURCHF", "side": "SELL", "price": 0.9134109033526, "volume": 0.9, "comment": "geb339a:L1:E", "rung_id": "L1", "state": "ENTRY", "ticket": 33734870}
+{"event": "order_placed", "ts": "2026-02-18T13:46:18.438053+00:00", "symbol": "EURCHF", "side": "BUY", "price": 0.9124350000000001, "volume": 0.9, "comment": "g4f9253:L-1:E", "rung_id": "L-1", "state": "ENTRY", "ticket": 33785278}
+{"event": "order_placed", "ts": "2026-02-18T13:46:18.562355+00:00", "symbol": "EURCHF", "side": "SELL", "price": 0.913035, "volume": 0.9, "comment": "g4f9253:L1:E", "rung_id": "L1", "state": "ENTRY", "ticket": 33785279}
+{"event": "order_cancelled", "ts": "2026-02-18T13:48:09.036773+00:00", "ticket": 33785279, "reason": "requote"}
+{"event": "order_placed", "ts": "2026-02-18T13:48:09.146167+00:00", "symbol": "EURCHF", "side": "SELL", "price": 0.913035, "volume": 1.305, "comment": "g4f9253:L1:E", "rung_id": "L1", "state": "ENTRY", "ticket": 33785325}
+{"event": "order_cancelled", "ts": "2026-02-18T14:06:00.106777+00:00", "ticket": 33785325, "reason": "requote"}
+{"event": "order_placed", "ts": "2026-02-18T14:06:00.231533+00:00", "symbol": "EURCHF", "side": "SELL", "price": 0.9124345647089761, "volume": 1.305, "comment": "g4f9253:L1:E", "rung_id": "L1", "state": "ENTRY", "ticket": 33786311}

@@ -139,6 +139,24 @@ MAX_NOTIONAL_MULT_EQUITY: float = float(os.getenv("MAX_NOTIONAL_MULT_EQUITY", "3
 STOP_LOSS_COOLDOWN_SECONDS: int = int(os.getenv("STOP_LOSS_COOLDOWN_SECONDS", "600"))
 
 # ═════════════════════════════════════════════════════════════════════════════
+#  HYBRID GRID + OCO BREAKOUT MODE
+# ═════════════════════════════════════════════════════════════════════════════
+HYBRID_ENABLED: bool = os.getenv("HYBRID_ENABLED", "true").lower() in ("true", "1", "yes")
+HYBRID_FLATTEN_GRID_ON_TREND: bool = os.getenv("HYBRID_FLATTEN_GRID_ON_TREND", "true").lower() in ("true", "1", "yes")
+HYBRID_REENTRY_COOLDOWN_SECONDS: int = int(os.getenv("HYBRID_REENTRY_COOLDOWN_SECONDS", "900"))
+
+OCO_BREAKOUT_LOOKBACK: int = int(os.getenv("OCO_BREAKOUT_LOOKBACK", "80"))
+OCO_ARM_TTL_SECONDS: int = int(os.getenv("OCO_ARM_TTL_SECONDS", "1800"))
+OCO_BUFFER_ATR_MULT: float = float(os.getenv("OCO_BUFFER_ATR_MULT", "0.35"))
+OCO_BUFFER_SPREAD_MULT: float = float(os.getenv("OCO_BUFFER_SPREAD_MULT", "3.0"))
+
+OCO_SIZE_MULT: float = float(os.getenv("OCO_SIZE_MULT", "1.0"))
+OCO_SL_SPACING_MULT: float = float(os.getenv("OCO_SL_SPACING_MULT", "2.0"))
+OCO_TRAIL_ACTIVATE_R: float = float(os.getenv("OCO_TRAIL_ACTIVATE_R", "0.9"))
+OCO_TRAIL_SPACING_MULT: float = float(os.getenv("OCO_TRAIL_SPACING_MULT", "1.2"))
+OCO_TIME_STOP_SECONDS: int = int(os.getenv("OCO_TIME_STOP_SECONDS", "7200"))
+
+# ═════════════════════════════════════════════════════════════════════════════
 #  BACKTEST-SPECIFIC (used only by backtest engines)
 # ═════════════════════════════════════════════════════════════════════════════
 BT_COMMISSION_PER_LOT: float = float(os.getenv("BT_COMMISSION_PER_LOT", "0.0"))  # OANDA: no commission, cost in spread
@@ -244,6 +262,53 @@ def _validate():
         errors.append(
             f"STOP_LOSS_COOLDOWN_SECONDS must be >= 0 "
             f"(got {STOP_LOSS_COOLDOWN_SECONDS})"
+        )
+    if HYBRID_REENTRY_COOLDOWN_SECONDS < 0:
+        errors.append(
+            f"HYBRID_REENTRY_COOLDOWN_SECONDS must be >= 0 "
+            f"(got {HYBRID_REENTRY_COOLDOWN_SECONDS})"
+        )
+    if OCO_BREAKOUT_LOOKBACK < 20:
+        errors.append(
+            f"OCO_BREAKOUT_LOOKBACK must be >= 20 "
+            f"(got {OCO_BREAKOUT_LOOKBACK})"
+        )
+    if OCO_ARM_TTL_SECONDS < 30:
+        errors.append(
+            f"OCO_ARM_TTL_SECONDS must be >= 30 "
+            f"(got {OCO_ARM_TTL_SECONDS})"
+        )
+    if OCO_BUFFER_ATR_MULT <= 0:
+        errors.append(
+            f"OCO_BUFFER_ATR_MULT must be > 0 "
+            f"(got {OCO_BUFFER_ATR_MULT})"
+        )
+    if OCO_BUFFER_SPREAD_MULT < 1.0:
+        errors.append(
+            f"OCO_BUFFER_SPREAD_MULT must be >= 1.0 "
+            f"(got {OCO_BUFFER_SPREAD_MULT})"
+        )
+    if OCO_SIZE_MULT <= 0:
+        errors.append(f"OCO_SIZE_MULT must be > 0 (got {OCO_SIZE_MULT})")
+    if OCO_SL_SPACING_MULT <= 0:
+        errors.append(
+            f"OCO_SL_SPACING_MULT must be > 0 "
+            f"(got {OCO_SL_SPACING_MULT})"
+        )
+    if OCO_TRAIL_ACTIVATE_R <= 0:
+        errors.append(
+            f"OCO_TRAIL_ACTIVATE_R must be > 0 "
+            f"(got {OCO_TRAIL_ACTIVATE_R})"
+        )
+    if OCO_TRAIL_SPACING_MULT <= 0:
+        errors.append(
+            f"OCO_TRAIL_SPACING_MULT must be > 0 "
+            f"(got {OCO_TRAIL_SPACING_MULT})"
+        )
+    if OCO_TIME_STOP_SECONDS < 60:
+        errors.append(
+            f"OCO_TIME_STOP_SECONDS must be >= 60 "
+            f"(got {OCO_TIME_STOP_SECONDS})"
         )
     if AUTO_SCAN_ENABLED:
         if SCAN_INTERVAL_SECONDS < 60:

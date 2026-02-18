@@ -125,6 +125,11 @@ class OrderManager:
     def place_limit(
         self, order: OrderSpec, current_price: float = 0.0
     ) -> Optional[dict]:
+        return self.place_pending(order, current_price=current_price)
+
+    def place_pending(
+        self, order: OrderSpec, current_price: float = 0.0
+    ) -> Optional[dict]:
         if not self.broker.select_symbol(order.symbol):
             return None
         sym_info = self.broker.symbol_info(order.symbol) or {}
@@ -143,9 +148,15 @@ class OrderManager:
                 )
                 return None
 
-        order_type = (
-            mt5.ORDER_TYPE_BUY_LIMIT if order.side == "BUY" else mt5.ORDER_TYPE_SELL_LIMIT
-        )
+        order_kind = (order.order_type or "LIMIT").upper()
+        if order_kind == "STOP":
+            order_type = (
+                mt5.ORDER_TYPE_BUY_STOP if order.side == "BUY" else mt5.ORDER_TYPE_SELL_STOP
+            )
+        else:
+            order_type = (
+                mt5.ORDER_TYPE_BUY_LIMIT if order.side == "BUY" else mt5.ORDER_TYPE_SELL_LIMIT
+            )
         request = {
             "action": mt5.TRADE_ACTION_PENDING,
             "symbol": order.symbol,
@@ -168,6 +179,12 @@ class OrderManager:
         if result and result.get("retcode") in (mt5.TRADE_RETCODE_DONE, 10010):
             self.journal.log_order_placed(order, result.get("order", 0))
         return result
+
+    def place_stop(
+        self, order: OrderSpec, current_price: float = 0.0
+    ) -> Optional[dict]:
+        order.order_type = "STOP"
+        return self.place_pending(order, current_price=current_price)
 
     def place_market(
         self, symbol: str, side: str, volume: float, comment: str
@@ -393,10 +410,10 @@ class OrderManager:
                 )
                 continue
 
-            result = self.place_limit(order, current_price=current_price)
+            result = self.place_pending(order, current_price=current_price)
             if result and result.get("retcode") in (mt5.TRADE_RETCODE_DONE, 10010):
                 log.info(
-                    f"{symbol}: PLACED {order.side} {order.volume:.2f} "
+                    f"{symbol}: PLACED {order.order_type} {order.side} {order.volume:.2f} "
                     f"at {order.price:.5f} [{order.comment}]"
                 )
                 actual_pending += 1

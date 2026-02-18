@@ -14,6 +14,7 @@ import sys
 import os
 from pathlib import Path
 import logging
+from logging.handlers import RotatingFileHandler
 from typing import Optional, Tuple
 from scipy.stats import gaussian_kde
 import pywt
@@ -41,13 +42,108 @@ SYMBOLS = [s.strip().upper() for s in _symbols_raw.split(",") if s.strip()]
 SCAN_INTERVAL = 5        # seconds between scans
 FUSION_THRESHOLD = 0.75  # composite score above this triggers alert
 
+# Logging settings (very verbose by design)
+SCANNER_LOG_LEVEL = os.getenv("ADV_SCANNER_LOG_LEVEL", "DEBUG").upper()
+SCANNER_LOG_DIR = Path(os.getenv("ADV_SCANNER_LOG_DIR", Path(__file__).resolve().parents[1] / "logs"))
+SCANNER_LOG_FILE = os.getenv("ADV_SCANNER_LOG_FILE", "advanced_scanner.log")
+SCANNER_SESSION_LOG = os.getenv("ADV_SCANNER_SESSION_LOG", "1").lower() in ("1", "true", "yes")
+SCANNER_LOG_MAX_MB = int(os.getenv("ADV_SCANNER_LOG_MAX_MB", "20"))
+SCANNER_LOG_BACKUPS = int(os.getenv("ADV_SCANNER_LOG_BACKUPS", "10"))
+
+
+class _Ansi:
+    RESET = "\033[0m"
+    DIM = "\033[2m"
+    BOLD = "\033[1m"
+    CYAN = "\033[36m"
+    GREEN = "\033[32m"
+    YELLOW = "\033[33m"
+    RED = "\033[31m"
+    MAGENTA = "\033[35m"
+
 # ================== LOGGING SETUP ==================
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)]
-)
-logger = logging.getLogger("AlphaHunter")
+class ColorFormatter(logging.Formatter):
+    LEVEL_COLORS = {
+        logging.DEBUG: _Ansi.DIM + _Ansi.CYAN,
+        logging.INFO: _Ansi.GREEN,
+        logging.WARNING: _Ansi.YELLOW,
+        logging.ERROR: _Ansi.RED,
+        logging.CRITICAL: _Ansi.BOLD + _Ansi.MAGENTA,
+    }
+
+    def __init__(self, fmt: str, datefmt: str | None = None, use_color: bool = True):
+        super().__init__(fmt=fmt, datefmt=datefmt)
+        self.use_color = use_color
+
+    def format(self, record: logging.LogRecord) -> str:
+        base = super().format(record)
+        if not self.use_color:
+            return base
+        color = self.LEVEL_COLORS.get(record.levelno, "")
+        if not color:
+            return base
+        return f"{color}{base}{_Ansi.RESET}"
+
+
+def _setup_scanner_logging() -> logging.Logger:
+    logger_name = "AlphaHunter"
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(getattr(logging, SCANNER_LOG_LEVEL, logging.DEBUG))
+    logger.propagate = False
+
+    if logger.handlers:
+        return logger
+
+    SCANNER_LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+    console_fmt = (
+        "[%(asctime)s UTC] %(levelname)-8s %(name)-12s | "
+        "%(message)s"
+    )
+    file_fmt = (
+        "[%(asctime)s UTC] %(levelname)-8s %(name)-12s | "
+        "%(filename)s:%(lineno)d | %(message)s"
+    )
+    datefmt = "%Y-%m-%d %H:%M:%S"
+
+    use_color = bool(getattr(sys.stdout, "isatty", lambda: False)())
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(getattr(logging, SCANNER_LOG_LEVEL, logging.DEBUG))
+    console_handler.setFormatter(ColorFormatter(console_fmt, datefmt=datefmt, use_color=use_color))
+    logger.addHandler(console_handler)
+
+    rotating_path = SCANNER_LOG_DIR / SCANNER_LOG_FILE
+    rotating_handler = RotatingFileHandler(
+        rotating_path,
+        maxBytes=SCANNER_LOG_MAX_MB * 1024 * 1024,
+        backupCount=SCANNER_LOG_BACKUPS,
+        encoding="utf-8",
+    )
+    rotating_handler.setLevel(logging.DEBUG)
+    rotating_handler.setFormatter(logging.Formatter(file_fmt, datefmt=datefmt))
+    logger.addHandler(rotating_handler)
+
+    if SCANNER_SESSION_LOG:
+        session_stamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        session_path = SCANNER_LOG_DIR / f"advanced_scanner_session_{session_stamp}.log"
+        session_handler = logging.FileHandler(session_path, encoding="utf-8")
+        session_handler.setLevel(logging.DEBUG)
+        session_handler.setFormatter(logging.Formatter(file_fmt, datefmt=datefmt))
+        logger.addHandler(session_handler)
+
+    logger.info("=" * 88)
+    logger.info("ALPHA HUNTER SCANNER LOGGING INITIALIZED")
+    logger.info(f"level={SCANNER_LOG_LEVEL} log_dir={SCANNER_LOG_DIR}")
+    logger.info(f"rotating_log={rotating_path}")
+    if SCANNER_SESSION_LOG:
+        logger.info("session_log=enabled")
+    else:
+        logger.info("session_log=disabled")
+    logger.info("=" * 88)
+    return logger
+
+
+logger = _setup_scanner_logging()
 
 # ================== MT5 CLIENT ==================
 class MT5Client:
@@ -60,6 +156,11 @@ class MT5Client:
         self.connected = False
 
     def connect(self):
+        logger.debug(
+            "MT5 connect requested "
+            f"(login={self.login or 'terminal-session'}, server={self.server or 'auto'}, "
+            f"path={'set' if self.path else 'default'})"
+        )
         kwargs = {}
         if self.path:
             kwargs["path"] = self.path
@@ -73,7 +174,17 @@ class MT5Client:
             logger.error(f"MT5 init failed: {mt5.last_error()}")
             return False
         self.connected = True
-        logger.info("Connected to MT5")
+        acc = mt5.account_info()
+        term = mt5.terminal_info()
+        if acc and term:
+            logger.info(
+                "Connected to MT5 | "
+                f"terminal={term.name} build={term.build} "
+                f"account={acc.login} server={acc.server} "
+                f"balance={acc.balance:.2f} {acc.currency}"
+            )
+        else:
+            logger.info("Connected to MT5")
         return True
 
     def disconnect(self):
@@ -85,10 +196,15 @@ class MT5Client:
         """Fetch OHLC rates as DataFrame."""
         rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)
         if rates is None or len(rates) == 0:
+            logger.debug(f"{symbol}: no rates returned timeframe={timeframe} count={count}")
             return pd.DataFrame()
         df = pd.DataFrame(rates)
         df['time'] = pd.to_datetime(df['time'], unit='s')
         df.set_index('time', inplace=True)
+        logger.debug(
+            f"{symbol}: rates timeframe={timeframe} rows={len(df)} "
+            f"from={df.index[0]} to={df.index[-1]}"
+        )
         return df
 
     def get_ticks(self, symbol, lookback_seconds=60):
@@ -96,11 +212,13 @@ class MT5Client:
         from_time = datetime.now() - timedelta(seconds=lookback_seconds)
         ticks = mt5.copy_ticks_from(symbol, from_time, 10000, mt5.COPY_TICKS_ALL)
         if ticks is None or len(ticks) == 0:
+            logger.debug(f"{symbol}: no ticks returned lookback={lookback_seconds}s")
             return pd.DataFrame()
         df = pd.DataFrame(ticks)
         df['time'] = pd.to_datetime(df['time'], unit='s')
         df.set_index('time', inplace=True)
         df.sort_index(inplace=True)
+        logger.debug(f"{symbol}: ticks rows={len(df)} from={df.index[0]} to={df.index[-1]}")
         return df
 
     def get_orderbook(self, symbol):
@@ -110,13 +228,16 @@ class MT5Client:
         try:
             book = mt5.market_book_get(symbol)
             if book is None:
+                logger.debug(f"{symbol}: orderbook unavailable")
                 return pd.DataFrame()
             # Convert to DataFrame
             bids = [{'price': b.price, 'volume': b.volume, 'type': 'bid'} for b in book if b.type == 1]
             asks = [{'price': a.price, 'volume': a.volume, 'type': 'ask'} for a in book if a.type == 2]
             df = pd.DataFrame(bids + asks)
+            logger.debug(f"{symbol}: orderbook rows={len(df)}")
             return df
         except:
+            logger.debug(f"{symbol}: orderbook fetch failed", exc_info=True)
             return pd.DataFrame()
 
     def symbol_info(self, symbol):
@@ -455,12 +576,18 @@ class FusionEngine:
 
     def update(self, name, score):
         self.scores[name] = score
+        logger.debug(f"fusion.update {name}={score:.4f} weight={self.weights.get(name, 1.0):.2f}")
 
     def fuse(self):
         total_weight = sum(self.weights.get(k, 1.0) for k in self.scores)
         if total_weight == 0:
             return 0.0
         composite = sum(self.scores.get(k, 0.0) * self.weights.get(k, 1.0) for k in self.scores) / total_weight
+        logger.debug(
+            "fusion.fuse "
+            f"components={{{', '.join(f'{k}:{v:.3f}' for k, v in self.scores.items())}}} "
+            f"composite={composite:.4f}"
+        )
         return composite
 
     def reset(self):
@@ -529,7 +656,8 @@ class AlphaHunterScanner:
         self.alert = SniperAlert()
 
     def process_symbol(self, symbol):
-        logger.debug(f"Processing {symbol}")
+        logger.info("-" * 88)
+        logger.info(f"SCAN START | symbol={symbol}")
         self.fusion.reset()
         # Fetch data
         ticks = self.client.get_ticks(symbol, lookback_seconds=300)
@@ -539,10 +667,12 @@ class AlphaHunterScanner:
         rates_m15 = self.client.get_rates(symbol, mt5.TIMEFRAME_M15, 50)
 
         if ticks.empty:
+            logger.warning(f"{symbol}: skipped (no tick data)")
             return
 
         prices = _tick_price_series(ticks)
         if prices.empty:
+            logger.warning(f"{symbol}: skipped (no usable tick prices)")
             return
         current_price = prices.iloc[-1]
         sym_info = self.client.symbol_info(symbol)
@@ -589,6 +719,15 @@ class AlphaHunterScanner:
 
         # Fuse
         composite = self.fusion.fuse()
+        logger.info(
+            f"{symbol}: px={current_price:.5f} composite={composite:.4f} "
+            f"threshold={FUSION_THRESHOLD:.2f}"
+        )
+        logger.info(
+            f"{symbol}: components topo={score_topo:.3f} wave={score_wave:.3f} "
+            f"entropy={score_entropy:.3f} delta={score_delta:.3f} "
+            f"micro={score_micro:.3f} sent={score_sent:.3f} quantum={score_quantum:.3f}"
+        )
 
         if composite >= FUSION_THRESHOLD:
             # Determine direction: positive from delta/quantum
@@ -609,7 +748,16 @@ class AlphaHunterScanner:
             if atr <= 0:
                 atr = max(current_price * 0.001, 0.0001)
             grid = self.alert.calculate_grid(symbol, current_price, direction, atr, digits)
+            logger.info(
+                f"{symbol}: ALERT TRIGGERED direction={grid['direction']} "
+                f"atr={atr:.6f} entry1={grid['entry1']} entry2={grid['entry2']} "
+                f"tp={grid['take_profit']} sl={grid['stop_loss']}"
+            )
             self.alert.send(symbol, composite, grid, self.fusion.scores)
+        else:
+            logger.info(f"{symbol}: no alert (below threshold)")
+
+        logger.info(f"SCAN END | symbol={symbol}")
 
         return composite
 
@@ -636,15 +784,20 @@ class AlphaHunterScanner:
             return
 
         logger.info(f"Starting scanner loop (interval={SCAN_INTERVAL}s)")
+        cycle = 0
         try:
             while True:
                 loop_start = time.time()
+                cycle += 1
+                logger.info("=" * 88)
+                logger.info(f"SCAN CYCLE #{cycle} started at {datetime.utcnow().isoformat()}Z")
                 for symbol in resolved:
                     try:
                         self.process_symbol(symbol)
                     except Exception as e:
-                        logger.error(f"Error on {symbol}: {e}")
+                        logger.exception(f"Error on {symbol}: {e}")
                 elapsed = time.time() - loop_start
+                logger.info(f"SCAN CYCLE #{cycle} elapsed={elapsed:.2f}s")
                 if elapsed < SCAN_INTERVAL:
                     time.sleep(SCAN_INTERVAL - elapsed)
         except KeyboardInterrupt:
@@ -658,5 +811,15 @@ class AlphaHunterScanner:
             self.client.disconnect()
 
 if __name__ == "__main__":
+    logger.info("=" * 88)
+    logger.info("ALPHA HUNTER SNIPER SCANNER")
+    logger.info(
+        f"symbols={','.join(SYMBOLS)} interval={SCAN_INTERVAL}s "
+        f"threshold={FUSION_THRESHOLD:.2f}"
+    )
+    logger.info(
+        "features=topography,wavelet,entropy,delta,microstructure,sentiment,quantum"
+    )
+    logger.info("=" * 88)
     scanner = AlphaHunterScanner()
     scanner.run()

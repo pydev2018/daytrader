@@ -21,6 +21,7 @@ import signal
 import time
 import uuid
 from collections import deque
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from statistics import median
 
@@ -31,7 +32,7 @@ from brokers.mt5 import MT5Broker
 from config import settings as cfg
 from execution.order_manager import OrderManager, FillEvent
 from grid.anchor import EmaAnchor
-from grid.orders import build_rungs, desired_orders, update_rung_on_fill
+from grid.orders import OrderSpec, build_rungs, desired_orders, parse_comment, update_rung_on_fill
 from grid.regime import classify_regime, compute_trend_z, TrendRegimeFilter
 from grid.scanner import GridScanner, FX_UNIVERSE, SymbolScore
 from grid.sizing import size_for_rung
@@ -44,6 +45,22 @@ log = get_logger("grid_engine")
 
 _shutdown_requested = False
 HISTORY_LEN = 250
+
+
+@dataclass
+class OcoRuntimeState:
+    mode: str = "RANGE_GRID"
+    armed_at: float = 0.0
+    arm_expires_at: float = 0.0
+    cooldown_until: float = 0.0
+    buy_comment: str = ""
+    sell_comment: str = ""
+    position_ticket: int = 0
+    position_side: str = ""
+    entry_price: float = 0.0
+    sl_distance: float = 0.0
+    best_price: float = 0.0
+    entry_ts: float = 0.0
 
 # ─── Market hours (FX) ──────────────────────────────────────────────────
 # FX market: Sunday ~22:00 UTC to Friday ~21:55 UTC
@@ -135,6 +152,7 @@ class GridEngine:
         self._fill_count: int = 0
         self._session_pnl: float = 0.0
         self._entry_pause_until: dict[str, float] = {}
+        self._oco_states: dict[str, OcoRuntimeState] = {}
 
     def start(self):
         log.info("=" * 70)
@@ -735,6 +753,22 @@ class GridEngine:
                 current_price=mid,
             )
 
+            # Hybrid safety: no OCO exposure over weekend
+            self._cancel_oco_pending(symbol)
+            for pos in self._oco_positions(self.broker.our_positions(symbol)):
+                ticket = pos.get("ticket", 0)
+                volume = pos.get("volume", 0.0)
+                ptype = pos.get("type", mt5.POSITION_TYPE_BUY)
+                if not ticket or volume <= 0:
+                    continue
+                close_side = "SELL" if ptype == mt5.POSITION_TYPE_BUY else "BUY"
+                self.order_mgr.close_position_by_ticket(
+                    symbol, ticket, volume, close_side, reason="weekend_close_oco"
+                )
+            oco = self._oco_states.setdefault(symbol, OcoRuntimeState())
+            oco.mode = "COOLDOWN"
+            oco.cooldown_until = time.time() + cfg.HYBRID_REENTRY_COOLDOWN_SECONDS
+
             log.info(
                 f"{symbol}: pre-weekend wind-down complete — "
                 f"closed {closed_count} stuck positions (pnl=${closed_pnl:.2f}), "
@@ -766,7 +800,282 @@ class GridEngine:
                 trend_confirm_bars=cfg.TREND_CONFIRM_BARS,
                 range_confirm_bars=cfg.RANGE_CONFIRM_BARS,
             )
+            self._oco_states[symbol] = OcoRuntimeState()
             self.last_sync[symbol] = 0.0
+
+    def _is_oco_comment(self, comment: str) -> bool:
+        return (comment or "").strip().lower().startswith("oco:")
+
+    def _is_grid_comment(self, comment: str) -> bool:
+        return parse_comment(comment or "") is not None
+
+    def _grid_positions(self, positions: list[dict]) -> list[dict]:
+        return [p for p in positions if not self._is_oco_comment(p.get("comment", ""))]
+
+    def _oco_positions(self, positions: list[dict]) -> list[dict]:
+        return [p for p in positions if self._is_oco_comment(p.get("comment", ""))]
+
+    def _cancel_oco_pending(self, symbol: str):
+        pending = self.broker.pending_orders(symbol)
+        for order in pending:
+            comment = order.get("comment", "")
+            if self._is_oco_comment(comment):
+                ticket = order.get("ticket", 0)
+                if ticket:
+                    self.order_mgr.cancel(ticket, reason="oco_cancel")
+
+    def _flatten_grid_positions(
+        self,
+        symbol: str,
+        state: GridState,
+        grid_positions: list[dict],
+        grid_center: float,
+        grid_spacing: float,
+    ):
+        closed = 0
+        for pos in grid_positions:
+            ticket = pos.get("ticket", 0)
+            volume = pos.get("volume", 0.0)
+            ptype = pos.get("type", mt5.POSITION_TYPE_BUY)
+            if not ticket or volume <= 0:
+                continue
+            close_side = "SELL" if ptype == mt5.POSITION_TYPE_BUY else "BUY"
+            if self.order_mgr.close_position_by_ticket(
+                symbol, ticket, volume, close_side, reason="hybrid_trend_switch"
+            ):
+                closed += 1
+
+        if closed > 0:
+            now_iso = datetime.now(timezone.utc).isoformat()
+            for rung in state.rungs:
+                if rung.state == "EXIT":
+                    rung.state = "ENTRY"
+                    rung.entry_price = grid_center + rung.level_index * grid_spacing
+                    rung.fill_price = None
+                    rung.exit_price = None
+                    rung.order_ticket = None
+                    rung.last_update = now_iso
+            log.warning(
+                f"{symbol}: hybrid trend-switch flattened {closed} grid position(s)"
+            )
+
+    def _arm_oco(
+        self,
+        symbol: str,
+        mid: float,
+        spread: float,
+        tick_size: float,
+        grid_spacing: float,
+        risk_multiplier: float,
+    ) -> bool:
+        state = self._oco_states.setdefault(symbol, OcoRuntimeState())
+        prices = list(self.price_history.get(symbol, []))
+        if len(prices) < cfg.OCO_BREAKOUT_LOOKBACK:
+            return False
+
+        window = prices[-cfg.OCO_BREAKOUT_LOOKBACK:]
+        local_high = max(window)
+        local_low = min(window)
+        buffer = max(
+            cfg.OCO_BUFFER_ATR_MULT * max(grid_spacing, tick_size),
+            cfg.OCO_BUFFER_SPREAD_MULT * max(spread, tick_size),
+            cfg.GRID_SPACING_MIN_TICKS * tick_size,
+        )
+
+        buy_price = self.broker.normalize_price(symbol, local_high + buffer)
+        sell_price = self.broker.normalize_price(symbol, local_low - buffer)
+        if buy_price <= mid or sell_price >= mid:
+            return False
+
+        volume = self.broker.normalize_volume(
+            symbol,
+            cfg.BASE_ORDER_SIZE_LOTS * max(0.1, risk_multiplier) * cfg.OCO_SIZE_MULT,
+        )
+        if volume <= 0:
+            return False
+
+        now_i = int(time.time())
+        buy_comment = f"oco:{symbol}:B:{now_i}"
+        sell_comment = f"oco:{symbol}:S:{now_i}"
+
+        buy_order = OrderSpec(
+            symbol=symbol,
+            side="BUY",
+            price=buy_price,
+            volume=volume,
+            comment=buy_comment,
+            rung_id="OCO_BUY",
+            state="ENTRY",
+            order_type="STOP",
+        )
+        sell_order = OrderSpec(
+            symbol=symbol,
+            side="SELL",
+            price=sell_price,
+            volume=volume,
+            comment=sell_comment,
+            rung_id="OCO_SELL",
+            state="ENTRY",
+            order_type="STOP",
+        )
+
+        buy_result = self.order_mgr.place_pending(buy_order, current_price=mid)
+        sell_result = self.order_mgr.place_pending(sell_order, current_price=mid)
+        buy_ok = bool(buy_result and buy_result.get("retcode") in (mt5.TRADE_RETCODE_DONE, 10010))
+        sell_ok = bool(sell_result and sell_result.get("retcode") in (mt5.TRADE_RETCODE_DONE, 10010))
+
+        if not (buy_ok and sell_ok):
+            self._cancel_oco_pending(symbol)
+            return False
+
+        state.mode = "OCO_ARMED"
+        state.armed_at = time.time()
+        state.arm_expires_at = state.armed_at + cfg.OCO_ARM_TTL_SECONDS
+        state.buy_comment = buy_comment
+        state.sell_comment = sell_comment
+        state.position_ticket = 0
+        state.position_side = ""
+        state.entry_price = 0.0
+        state.sl_distance = max(tick_size, cfg.OCO_SL_SPACING_MULT * max(grid_spacing, tick_size))
+        state.best_price = 0.0
+        state.entry_ts = 0.0
+        log.info(
+            f"{symbol}: OCO armed buy_stop={buy_price:.5f} sell_stop={sell_price:.5f} vol={volume:.2f}"
+        )
+        return True
+
+    def _manage_oco(
+        self,
+        symbol: str,
+        trend_active: bool,
+        bid: float,
+        ask: float,
+        mid: float,
+        spread: float,
+        tick_size: float,
+        grid_spacing: float,
+        risk_multiplier: float,
+        all_positions: list[dict],
+    ):
+        if not cfg.HYBRID_ENABLED:
+            return
+
+        oco = self._oco_states.setdefault(symbol, OcoRuntimeState())
+        now = time.time()
+        oco_positions = self._oco_positions(all_positions)
+
+        if oco.mode == "COOLDOWN" and now >= oco.cooldown_until:
+            oco.mode = "RANGE_GRID" if not trend_active else "TREND_TRANSITION"
+
+        if trend_active and oco.mode == "RANGE_GRID":
+            oco.mode = "TREND_TRANSITION"
+
+        if not trend_active and oco.mode in ("OCO_ARMED", "TREND_TRANSITION"):
+            self._cancel_oco_pending(symbol)
+            oco.mode = "COOLDOWN"
+            oco.cooldown_until = now + cfg.HYBRID_REENTRY_COOLDOWN_SECONDS
+
+        if oco.mode == "OCO_ARMED":
+            if now >= oco.arm_expires_at:
+                self._cancel_oco_pending(symbol)
+                oco.mode = "COOLDOWN"
+                oco.cooldown_until = now + cfg.HYBRID_REENTRY_COOLDOWN_SECONDS
+                return
+
+            if oco_positions:
+                self._cancel_oco_pending(symbol)
+                pos = oco_positions[0]
+                ticket = pos.get("ticket", 0)
+                ptype = pos.get("type", mt5.POSITION_TYPE_BUY)
+                side = "BUY" if ptype == mt5.POSITION_TYPE_BUY else "SELL"
+                entry_price = pos.get("price_open", mid)
+                oco.mode = "TREND_POSITION"
+                oco.position_ticket = ticket
+                oco.position_side = side
+                oco.entry_price = entry_price
+                oco.sl_distance = max(tick_size, cfg.OCO_SL_SPACING_MULT * max(grid_spacing, tick_size))
+                oco.best_price = bid if side == "BUY" else ask
+                oco.entry_ts = now
+
+                if side == "BUY":
+                    sl_price = self.broker.normalize_price(symbol, entry_price - oco.sl_distance)
+                else:
+                    sl_price = self.broker.normalize_price(symbol, entry_price + oco.sl_distance)
+                self.broker.modify_position_tp(ticket, symbol, sl=sl_price, tp=0.0)
+                log.info(
+                    f"{symbol}: OCO triggered {side} pos=#{ticket} entry={entry_price:.5f} sl={sl_price:.5f}"
+                )
+                return
+
+            pending = [o for o in self.broker.pending_orders(symbol) if self._is_oco_comment(o.get("comment", ""))]
+            if not pending:
+                self._arm_oco(
+                    symbol=symbol,
+                    mid=mid,
+                    spread=spread,
+                    tick_size=tick_size,
+                    grid_spacing=grid_spacing,
+                    risk_multiplier=risk_multiplier,
+                )
+            return
+
+        if oco.mode == "TREND_POSITION":
+            if not oco_positions:
+                oco.mode = "COOLDOWN"
+                oco.cooldown_until = now + cfg.HYBRID_REENTRY_COOLDOWN_SECONDS
+                oco.position_ticket = 0
+                oco.position_side = ""
+                return
+
+            pos = next((p for p in oco_positions if p.get("ticket", 0) == oco.position_ticket), oco_positions[0])
+            ticket = pos.get("ticket", 0)
+            side = "BUY" if pos.get("type", mt5.POSITION_TYPE_BUY) == mt5.POSITION_TYPE_BUY else "SELL"
+            current_sl = pos.get("sl", 0.0) or 0.0
+            sl_distance = max(tick_size, oco.sl_distance)
+
+            if side == "BUY":
+                oco.best_price = max(oco.best_price, bid)
+                progress = max(0.0, oco.best_price - oco.entry_price)
+            else:
+                oco.best_price = min(oco.best_price or ask, ask)
+                progress = max(0.0, oco.entry_price - oco.best_price)
+
+            trail_active = progress >= cfg.OCO_TRAIL_ACTIVATE_R * sl_distance
+            if trail_active:
+                trail_distance = max(tick_size, cfg.OCO_TRAIL_SPACING_MULT * max(grid_spacing, tick_size))
+                if side == "BUY":
+                    new_sl = self.broker.normalize_price(symbol, oco.best_price - trail_distance)
+                    if new_sl > current_sl + tick_size:
+                        self.broker.modify_position_tp(ticket, symbol, sl=new_sl, tp=0.0)
+                else:
+                    new_sl = self.broker.normalize_price(symbol, oco.best_price + trail_distance)
+                    if current_sl <= 0 or new_sl < current_sl - tick_size:
+                        self.broker.modify_position_tp(ticket, symbol, sl=new_sl, tp=0.0)
+
+            if (now - oco.entry_ts) >= cfg.OCO_TIME_STOP_SECONDS:
+                volume = pos.get("volume", 0.0)
+                if volume > 0 and ticket:
+                    close_side = "SELL" if side == "BUY" else "BUY"
+                    self.order_mgr.close_position_by_ticket(
+                        symbol, ticket, volume, close_side, reason="oco_time_stop"
+                    )
+                oco.mode = "COOLDOWN"
+                oco.cooldown_until = now + cfg.HYBRID_REENTRY_COOLDOWN_SECONDS
+                return
+
+        if oco.mode == "TREND_TRANSITION":
+            if trend_active:
+                self._arm_oco(
+                    symbol=symbol,
+                    mid=mid,
+                    spread=spread,
+                    tick_size=tick_size,
+                    grid_spacing=grid_spacing,
+                    risk_multiplier=risk_multiplier,
+                )
+            else:
+                oco.mode = "COOLDOWN"
+                oco.cooldown_until = now + cfg.HYBRID_REENTRY_COOLDOWN_SECONDS
 
     # =====================================================================
     #  MAIN LOOP
@@ -937,9 +1246,10 @@ class GridEngine:
             return
 
         # Inventory
-        positions = self.broker.our_positions(symbol)
+        all_positions = self.broker.our_positions(symbol)
+        grid_positions = self._grid_positions(all_positions)
         inventory_lots = 0.0
-        for pos in positions:
+        for pos in grid_positions:
             ptype = pos.get("type", mt5.POSITION_TYPE_BUY)
             sign = 1 if ptype == mt5.POSITION_TYPE_BUY else -1
             inventory_lots += sign * pos.get("volume", 0.0)
@@ -1066,9 +1376,9 @@ class GridEngine:
         else:
             state.anchor = anchor
 
-        # Adopt any open positions that are not yet attached to a rung
+        # Adopt any grid open positions that are not yet attached to a rung
         now_iso = datetime.now(timezone.utc).isoformat()
-        for pos in positions:
+        for pos in grid_positions:
             ticket = pos.get("ticket", 0)
             volume = pos.get("volume", 0.0)
             open_price = pos.get("price_open", 0.0)
@@ -1089,6 +1399,52 @@ class GridEngine:
                 source="runtime_adopt",
             )
 
+        trend_active = trend_state.regime == "TREND"
+        oco_state = self._oco_states.setdefault(symbol, OcoRuntimeState())
+        if cfg.HYBRID_ENABLED and trend_active and oco_state.mode == "RANGE_GRID":
+            oco_state.mode = "TREND_TRANSITION"
+
+        if cfg.HYBRID_ENABLED and oco_state.mode == "TREND_TRANSITION":
+            # Fast transition: stop all grid pending entries and optionally flatten
+            limit_orders = int(self.account_model.get("limit_orders", 0) or 0)
+            max_pending = (
+                min(cfg.MAX_PENDING_ORDERS_PER_SYMBOL, limit_orders)
+                if limit_orders > 0
+                else cfg.MAX_PENDING_ORDERS_PER_SYMBOL
+            )
+            self.order_mgr.sync_orders(
+                symbol=symbol,
+                desired=[],
+                grid_id=state.grid_id,
+                tick_size=tick_size,
+                requote_ticks=cfg.REQUOTE_THRESHOLD_TICKS,
+                max_pending=max_pending,
+                current_price=mid,
+            )
+            if cfg.HYBRID_FLATTEN_GRID_ON_TREND:
+                self._flatten_grid_positions(
+                    symbol=symbol,
+                    state=state,
+                    grid_positions=grid_positions,
+                    grid_center=grid_center,
+                    grid_spacing=grid_spacing,
+                )
+                all_positions = self.broker.our_positions(symbol)
+                grid_positions = self._grid_positions(all_positions)
+
+        self._manage_oco(
+            symbol=symbol,
+            trend_active=trend_active,
+            bid=bid,
+            ask=ask,
+            mid=mid,
+            spread=spread,
+            tick_size=tick_size,
+            grid_spacing=grid_spacing,
+            risk_multiplier=risk_status.risk_multiplier,
+            all_positions=all_positions,
+        )
+
         entry_cooldown_active = now < self._entry_pause_until.get(symbol, 0.0)
 
         # Edge check
@@ -1098,6 +1454,7 @@ class GridEngine:
             and edge_ok
             and not block_entries
             and not entry_cooldown_active
+            and (not cfg.HYBRID_ENABLED or self._oco_states[symbol].mode == "RANGE_GRID")
         )
 
         # Size adjustments
@@ -1136,6 +1493,8 @@ class GridEngine:
             latest_time = state.last_deal_time
             latest_deal_id = state.last_deal_id
             for fill in fills:
+                if not self._is_grid_comment(fill.comment):
+                    continue
                 if fill.deal_entry == 0:
                     # ── ENTRY FILL: limit order filled, position opened ──
                     rung = None
@@ -1185,7 +1544,7 @@ class GridEngine:
                         pos_ticket = fill.position_ticket or rung.order_ticket
                         if not pos_ticket:
                             # Fallback: find from broker positions
-                            for p in positions:
+                            for p in grid_positions:
                                 if abs(p.get("price_open", 0) - fill.price) < grid_spacing * 0.3:
                                     if abs(p.get("volume", 0) - fill.volume) < 0.015:
                                         pos_ticket = p.get("ticket", 0)
@@ -1293,7 +1652,7 @@ class GridEngine:
 
         # Ensure TP is set for all EXIT rungs (hedging safety net)
         positions_by_ticket = {
-            p.get("ticket", 0): p for p in positions if p.get("ticket", 0)
+            p.get("ticket", 0): p for p in grid_positions if p.get("ticket", 0)
         }
         for rung in state.rungs:
             if rung.state != "EXIT" or not rung.order_ticket:
@@ -1484,6 +1843,22 @@ class GridEngine:
                     rung.fill_price = None
                     rung.exit_price = None
                     rung.order_ticket = None
+
+            # Close any active OCO positions and cancel OCO pending orders
+            self._cancel_oco_pending(symbol)
+            for pos in self._oco_positions(self.broker.our_positions(symbol)):
+                ticket = pos.get("ticket", 0)
+                volume = pos.get("volume", 0.0)
+                ptype = pos.get("type", mt5.POSITION_TYPE_BUY)
+                if not ticket or volume <= 0:
+                    continue
+                close_side = "SELL" if ptype == mt5.POSITION_TYPE_BUY else "BUY"
+                self.order_mgr.close_position_by_ticket(
+                    symbol, ticket, volume, close_side, reason="risk_halt_oco"
+                )
+            oco = self._oco_states.setdefault(symbol, OcoRuntimeState())
+            oco.mode = "COOLDOWN"
+            oco.cooldown_until = time.time() + cfg.HYBRID_REENTRY_COOLDOWN_SECONDS
             return
 
         # Sync orders at cadence
