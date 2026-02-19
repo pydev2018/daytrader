@@ -1,4 +1,4 @@
-# Runbook — Grid Trading System
+# Runbook — OCO Breakout Trading System
 
 ## Prerequisites
 - **OS**: Windows (MT5 only runs on Windows)
@@ -21,8 +21,14 @@ pip install -r requirements.txt
 
 | Parameter | Purpose | Conservative Default |
 |---|---|---|
-| `GRID_SYMBOLS` | Symbols to trade | `EURUSD` |
+| `OCO_SYMBOLS` | Symbols to trade | `EURUSD` |
+| `OCO_TIMEFRAME` | Breakout source bars | `M5` |
+| `OCO_BREAKOUT_LOOKBACK` | Breakout window size | `80` |
+| `OCO_ARM_TTL_SECONDS` | Pending-arm expiry | `1800` |
 | `BASE_ORDER_SIZE_LOTS` | Base lot size | `0.01` |
+| `OCO_SL_SPACING_MULT` | Initial SL distance multiple | `2.0` |
+| `OCO_TRAIL_ACTIVATE_R` | Trailing activation threshold | `0.9` |
+| `OCO_TIME_STOP_SECONDS` | Max hold time per OCO leg | `7200` |
 | `MAX_INVENTORY_LOTS` | Max inventory cap | `1.0` |
 | `MAX_DRAWDOWN_PCT` | Kill-switch drawdown | `15.0` |
 | `DAILY_LOSS_LIMIT_PCT` | Daily loss halt | `3.0` |
@@ -47,40 +53,15 @@ conda activate tradebot
 python -m pytest tests/ -v
 ```
 
-### Run Backtest
-```python
-from backtest.data import load_csv, normalize_bars
-from backtest.grid_engine import GridBacktestEngine
-
-df = normalize_bars(load_csv("path/to/bidask_data.csv"))
-engine = GridBacktestEngine(df, contract_size=100000.0, tick_size=0.00001)
-result = engine.run(starting_equity=10000.0, slip_ticks=1, spread_mult=1.0)
-
-print(f"PnL (net): ${result.total_pnl_net:,.2f}")
-print(f"Trades: {result.trades} (W:{result.wins} L:{result.losses})")
-print(f"Max DD: {result.max_drawdown:.1f}%")
-print(f"Sharpe: {result.sharpe:.2f}")
-print(f"Commission: ${result.total_commission:,.2f}")
-```
-
-### Walk-Forward Validation
-```python
-from backtest.grid_engine import walk_forward
-
-windows = walk_forward(df, contract_size=100000.0, tick_size=0.00001, n_windows=5)
-for i, w in enumerate(windows):
-    oos = w.test_result
-    print(f"Window {i}: OOS PnL=${oos.total_pnl_net:,.2f} DD={oos.max_drawdown:.1f}%")
-```
-
 ## Operational States
 
 | State | Meaning | Action |
 |---|---|---|
-| **ACTIVE** | Normal operation | Grid entries + exits enabled |
-| **CAUTION** | Trend detected | Size reduced by 50% |
-| **PAUSED** | Vol shock / spread blowout | No new entries; exits only |
-| **HALTED** | Risk limit breached | All orders cancelled; unwind attempted |
+| **IDLE** | No active arm/position | Await next arm cycle |
+| **ARMED** | OCO stop entries active | Waiting for breakout trigger |
+| **POSITION** | One OCO leg triggered | Opposite pending cancelled; trailing/time-stop active |
+| **COOLDOWN** | Post-close/risk pause | No new arm until cooldown ends |
+| **HALTED** | Risk limit breached | Orders cancelled; unwind attempted |
 
 ## Risk Controls
 
@@ -132,7 +113,7 @@ Configure `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env` to receive:
 - Other halt reasons auto-clear when conditions resolve
 
 ### Orders not being placed
-- Check if regime is PAUSED (spread/vol gate)
-- Check if edge gate fails (spacing too close to cost floor)
-- Check MT5 terminal log for order rejections
-- Verify stops_level constraints aren't filtering orders
+- Check if symbol is in `OCO_REENTRY_COOLDOWN_SECONDS`
+- Check if arm TTL is expiring repeatedly due to low volatility
+- Check MT5 terminal log for stop-order rejections
+- Verify stops_level constraints aren't filtering stop entries

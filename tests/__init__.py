@@ -1,1 +1,1 @@
-"""Grid trading system test suite."""
+"""OCO breakout system test suite."""

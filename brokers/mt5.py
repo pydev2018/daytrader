@@ -432,7 +432,7 @@ class MT5Broker:
             "price": price,
             "deviation": 20,
             "magic": cfg.MAGIC_NUMBER,
-            "comment": "grid_close",
+            "comment": "oco_close",
             "type_filling": self.pick_filling_mode(sym_info),
         }
         return self.send_order(request, max_retries=2)

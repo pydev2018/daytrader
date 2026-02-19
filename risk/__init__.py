@@ -1,6 +1,5 @@
-# Wolf Trading System — Risk management modules
 """Risk management utilities."""
 
-from .grid_risk import GridRiskManager, RiskStatus
+from .manager import RiskManager, RiskStatus
 
-__all__ = ["GridRiskManager", "RiskStatus"]
+__all__ = ["RiskManager", "RiskStatus"]

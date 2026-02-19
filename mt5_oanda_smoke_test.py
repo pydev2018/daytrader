@@ -42,7 +42,7 @@ def main():
         f"netting={model.get('is_netting')} fifo={model.get('fifo_close')}"
     )
 
-    symbol = cfg.GRID_SYMBOLS[0] if cfg.GRID_SYMBOLS else "EURUSD"
+    symbol = cfg.OCO_SYMBOLS[0] if cfg.OCO_SYMBOLS else "EURUSD"
     if not broker.select_symbol(symbol):
         print(f"ERROR: Cannot select symbol {symbol}")
         broker.disconnect()

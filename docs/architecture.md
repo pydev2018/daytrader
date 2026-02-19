@@ -1,34 +1,122 @@
-# Architecture
+# Architecture — OCO Breakout Trading System
 
-## System Overview
-The system is a grid-only trading engine orchestrated by `GridEngine` (`grid/engine.py`) and launched via `app/main.py` (with a root `main.py` shim). It connects to MT5 through a broker adapter, computes grid parameters (anchor, spacing, sizing, regime), reconciles pending orders, and enforces risk controls and kill-switches.
+## 1) System Overview
 
-## Core Components and Responsibilities
-- **Orchestrator** — `GridEngine` manages lifecycle, state, and the main loop (`grid/engine.py`).
-- **MT5 Adapter** — `MT5Broker` handles connection, market data, orders, and history (`brokers/mt5.py`).
-- **Grid Logic** — anchor, spacing, sizing, regime, and rung state (`grid/anchor.py`, `grid/spacing.py`, `grid/sizing.py`, `grid/regime.py`, `grid/orders.py`, `grid/state.py`).
-- **Order Reconciliation** — idempotent order placement and fill detection (`execution/order_manager.py`).
-- **Risk Controls** — inventory limits, leverage caps, drawdown halts, and unwind (`risk/grid_risk.py`).
-- **Alerts & Logs** — Telegram alerts and structured logging (`alerts/telegram.py`, `utils/logger.py`).
-- **Backtesting** — bid/ask grid simulator (`backtest/grid_engine.py`, `backtest/fills.py`, `backtest/data.py`).
+The system is a single-process, event-loop trading runtime that executes a pure OCO breakout strategy on MT5. It is structured in layers:
 
-## Module Boundaries and Dependency Graph
+- Interface layer: CLI entrypoints (`main.py`, `app/main.py`)
+- Strategy/runtime layer: OCO orchestration (`oco/engine.py`)
+- Execution layer: OCO order operations (`oco/order_manager.py`)
+- Broker adapter layer: MT5 API abstraction (`brokers/mt5.py`)
+- Risk layer: account-level and symbol-level limits (`risk/manager.py`)
+- Support layer: logging and alerts (`utils/logger.py`, `alerts/telegram.py`)
+
+## 2) Component Diagram
+
 ```mermaid
-graph TD
-  app[app/main.py] --> engine[grid/engine.py: GridEngine]
-  engine --> broker[brokers/mt5.py: MT5Broker]
-  engine --> ordermgr[execution/order_manager.py: OrderManager]
-  engine --> risk[risk/grid_risk.py: GridRiskManager]
-  engine --> grid[grid/*: anchor/spacing/sizing/regime/orders/state]
-  engine --> alerts[alerts/telegram.py]
-  engine --> logs[utils/logger.py]
-
-  ordermgr --> broker
-  risk --> broker
+flowchart TD
+    A[CLI main.py / app.main] --> B[OcoEngine]
+    B --> C[RiskManager]
+    B --> D[OcoOrderManager]
+    B --> E[MT5Broker]
+    B --> F[TelegramAlerter]
+    D --> E
+    C --> E
+    E --> G[(MetaTrader 5 Terminal)]
+    B --> H[(In-memory Symbol State)]
+    C --> I[(data/state/risk_state.json)]
+    B --> J[(logs/wolf*.log)]
 ```
 
-## Key Design Decisions
-- **Grid-only strategy**: all legacy Pristine/Sniper logic has been removed; grid is the sole trading mode.
-- **Netting-safe**: order logic assumes MT5 netting and uses volume-based closes (no close-by or hedging-only logic).
-- **Idempotent orders**: order comments encode grid/rung state to support reconciliation and restart recovery.
-- **Risk-first**: inventory, leverage, and drawdown limits gate execution; halts trigger unwind and cancel orders.
+## 3) Runtime Lifecycle
+
+### Startup
+
+1. `app.main.main()` configures logging and parses CLI.
+2. `OcoEngine.start()`:
+   - Connects to MT5.
+   - Validates hedging account model.
+   - Selects configured symbols.
+   - Cancels stale pending orders for clean startup.
+   - Adopts compatible open OCO positions into runtime state.
+   - Sends bot start alert to Telegram (if enabled).
+
+### Continuous Loop
+
+Per loop iteration:
+
+1. Check market session gate (`_is_market_open`).
+2. Build one risk cycle snapshot (`RiskManager.begin_cycle`) for efficiency.
+3. Process each symbol (`_process_symbol`):
+   - Read tick, positions, pending orders.
+   - Evaluate risk limits.
+   - Manage active position or arm OCO pending pair.
+4. Update telemetry and status logs.
+5. Sleep using adaptive cadence (`_compute_loop_sleep`) if enabled.
+
+### Shutdown
+
+- SIGINT/SIGTERM sets `_shutdown_requested`.
+- Engine completes current cycle, disconnects MT5, sends stop alert.
+
+## 4) Internal State Model
+
+Each symbol has an `OcoSymbolState` in memory:
+
+- Arming state: `armed_at`, `arm_expires_at`, `arm_id`, `buy_ticket`, `sell_ticket`
+- Position state: `position_ticket`, `position_side`, `entry_price`, `entry_ts`
+- SL/trailing state: `sl_distance`, `best_price`
+- Cooldown state: `cooldown_until`
+- Setup cache state: `setup_cached`, `setup_cached_at`, `setup_cached_spread`
+
+State is not persisted for strategy continuity; on restart, open OCO positions are re-adopted from broker state.
+
+## 5) Risk Architecture
+
+`RiskManager` enforces:
+
+- Max drawdown (permanent halt)
+- Daily/weekly loss limits
+- Inventory and notional/leverage caps
+- Margin-level halts/cautions
+- Consecutive error fail-safe
+
+Risk state persistence (`data/state/risk_state.json`) stores halt and equity baselines across restarts.
+
+## 6) Execution Architecture
+
+`OcoOrderManager` is intentionally narrow:
+
+- `place_stop`: places BUY_STOP / SELL_STOP pending entries
+- `cancel`: removes pending order by ticket
+- `close_position_by_ticket`: closes a specific hedged position
+- `unwind_position`: emergency flatten logic with duplicate-send guard
+
+All raw request execution and normalization are delegated to `MT5Broker`.
+
+## 7) Adaptive/Performance Architecture
+
+Current performance controls:
+
+- Symbol info short cache in broker adapter
+- Risk cycle snapshot per loop (shared across symbols)
+- Setup cache with smart refresh windows and spread-shock forcing
+- Adaptive loop sleep bounded by min/max limits
+- Market-closed one-time cleanup guard
+
+## 8) Logging and Observability
+
+Two main runtime logs:
+
+- Status log (`_log_status`): per-symbol lifecycle summary
+- Telemetry log (`_log_telemetry`):
+  - Loop latency (`avg_loop_ms`, `max_loop_ms`)
+  - Current loop sleep (`sleep_s`)
+  - Broker/order call counters
+  - Per-symbol state/time/event/error distribution
+
+## 9) Design Constraints and Guarantees
+
+- Hedging account required.
+- Strategy is deterministic per loop inputs.
+- No guarantee of profitability; risk controls bound failure modes but do not remove market risk.
