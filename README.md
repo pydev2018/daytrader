@@ -33,5 +33,7 @@ Configuration lives in `config/settings.py` and `.env`. Key variables:
 ## Backtesting
 Use `backtest/grid_engine.py` with bid/ask data.
 
+Archived scripts are organized under `obsolete/`.
+
 ## Disclaimer
 This system is not guaranteed profitable. Markets are non-stationary, and the strategy is explicitly risk-managed to fail safely under adverse regimes.
