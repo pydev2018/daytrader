@@ -28,7 +28,7 @@ The system is composed of the following cooperating layers:
 - Risk management: `risk/grid_risk.py` with persistent state and halting.
 - Alerts: `alerts/telegram.py` for non-blocking Telegram notifications.
 - Logging: `utils/logger.py` for structured console and rotating file logs.
-- Smoke test: `mt5_oanda_smoke_test.py` validates connectivity and broker constraints without placing orders.
+- Smoke test: `diagnostics/mt5_oanda_smoke_test.py` validates connectivity and broker constraints without placing orders.
 - Tests: `tests/*` validate core behavior for live modules.
 
 ## Runtime lifecycle
@@ -428,7 +428,7 @@ This catalog names all key functions, classes, and methods in the live system an
 
 ### Smoke test
 
-- `mt5_oanda_smoke_test.py`:
+- `diagnostics/mt5_oanda_smoke_test.py`:
   - `_print_check()` prints MT5 order_check results in a consistent format.
   - `main()` verifies MT5 connectivity, symbol metadata, and order_check behavior for multiple filling modes without placing orders.
 
