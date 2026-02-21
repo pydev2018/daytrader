@@ -1,152 +1,243 @@
-"""
-Grid Trading System — Entry Point.
-"""
-
 from __future__ import annotations
 
 import argparse
+import math
+import time
 
 from brokers.mt5 import MT5Broker
-from grid.engine import GridEngine
+from config import settings as cfg
+from execution.models import OrderIntent
+from execution.order_manager import OrderManager
+from risk.guards import RiskConfig, RiskSnapshot, should_risk_off
+from storage.state_store import load_state, save_state
+from strategy.indicators import adx, atr_pips, trend_direction
+from strategy.planner import build_grid_plan
+from strategy.state_machine import TransitionInput, transition_phase
+from strategy.types import Phase, SymbolRuntime, TrendDirection
 from utils.logger import setup_logging
 
 
-def show_status():
+class PhasedGridEngine:
+    def __init__(self) -> None:
+        self.broker = MT5Broker()
+        self.order_mgr = OrderManager(self.broker)
+        self.states = load_state(cfg.STATE_PATH)
+
+    def _runtime(self, symbol: str) -> SymbolRuntime:
+        if symbol not in self.states:
+            self.states[symbol] = SymbolRuntime(symbol=symbol)
+        return self.states[symbol]
+
+    def _risk_snapshot(self, symbol: str, pip_size: float) -> RiskSnapshot:
+        account = self.broker.account_info()
+        equity = float(account.get("equity", 0.0) or 0.0)
+        balance = float(account.get("balance", 0.0) or 0.0)
+        margin = float(account.get("margin", 0.0) or 0.0)
+        margin_usage = (margin / equity * 100.0) if equity > 0 else 100.0
+        drawdown = ((balance - equity) / balance * 100.0) if balance > 0 else 0.0
+
+        tick = self.broker.symbol_tick(symbol) or {}
+        spread_pips = 0.0
+        if tick and pip_size > 0:
+            spread_pips = (float(tick.get("ask", 0.0)) - float(tick.get("bid", 0.0))) / pip_size
+
+        positions = self.broker.our_positions(symbol)
+        buy_lots = sum(float(p.get("volume", 0.0)) for p in positions if int(p.get("type", 0)) == 0)
+        sell_lots = sum(float(p.get("volume", 0.0)) for p in positions if int(p.get("type", 0)) == 1)
+
+        return RiskSnapshot(
+            spread_pips=float(spread_pips),
+            margin_usage_pct=float(margin_usage),
+            drawdown_pct=float(drawdown),
+            net_delta_lots=float(buy_lots - sell_lots),
+        )
+
+    def _step_ticks(self, atr_pips_value: float, spread_pips: float, pip_size: float, point: float) -> int:
+        atr_price = atr_pips_value * pip_size
+        spread_price = spread_pips * pip_size
+        target = max(atr_price * cfg.STEP_ATR_MULT, spread_price * cfg.STEP_SPREAD_MULT)
+        if point <= 0:
+            return cfg.MIN_STEP_TICKS
+        return max(cfg.MIN_STEP_TICKS, int(math.ceil(target / point)))
+
+    def _build_intents(
+        self,
+        symbol: str,
+        state: SymbolRuntime,
+        point: float,
+        lot_size: float,
+    ) -> list[OrderIntent]:
+        step_price = state.step_ticks * point
+        if step_price <= 0:
+            return []
+
+        plan = build_grid_plan(
+            center_price=state.center_price,
+            step_price=step_price,
+            offset_ratio=cfg.OFFSET_RATIO,
+            levels=cfg.MAX_RUNGS_PER_SIDE,
+            phase=state.phase,
+            trend=state.trend,
+        )
+
+        intents: list[OrderIntent] = []
+        for entry in plan.long_entries:
+            intents.append(
+                OrderIntent(
+                    symbol=symbol,
+                    side="BUY",
+                    order_type="LIMIT",
+                    volume=lot_size,
+                    price=entry,
+                    tp=entry + plan.step_price,
+                    comment="phased_grid_long",
+                )
+            )
+        for entry in plan.short_entries:
+            intents.append(
+                OrderIntent(
+                    symbol=symbol,
+                    side="SELL",
+                    order_type="LIMIT",
+                    volume=lot_size,
+                    price=entry,
+                    tp=entry - plan.step_price,
+                    comment="phased_grid_short",
+                )
+            )
+        return intents
+
+    def run(self) -> None:
+        if not self.broker.connect():
+            raise SystemExit("Could not connect MT5")
+
+        account_model = self.broker.account_model()
+        if not account_model.get("is_hedging"):
+            raise SystemExit("Phased grid requires MT5 hedging account mode")
+
+        for symbol in cfg.SYMBOLS:
+            if not self.broker.select_symbol(symbol):
+                raise SystemExit(f"Cannot select symbol: {symbol}")
+
+        risk_cfg = RiskConfig(
+            max_spread_pips=cfg.MAX_SPREAD_PIPS,
+            max_margin_usage_pct=cfg.MAX_MARGIN_USAGE_PCT,
+            max_drawdown_pct=cfg.MAX_DRAWDOWN_PCT,
+            max_net_delta_lots=cfg.MAX_NET_DELTA_LOTS,
+        )
+
+        while True:
+            for symbol in cfg.SYMBOLS:
+                info = self.broker.symbol_info(symbol)
+                tick = self.broker.symbol_tick(symbol)
+                rates = self.broker.get_rates(symbol, cfg.TIMEFRAME, cfg.BAR_COUNT)
+                if not info or not tick or rates is None or rates.empty:
+                    continue
+
+                point = float(info.get("point", 0.0))
+                pip_size = self.broker.pip_size(info)
+                mid = (float(tick["bid"]) + float(tick["ask"])) / 2.0
+
+                state = self._runtime(symbol)
+                if state.center_price <= 0:
+                    state.center_price = mid
+
+                adx_value = adx(rates, cfg.ADX_PERIOD)
+                atr_value_pips = atr_pips(rates, cfg.ATR_PERIOD, pip_size)
+                trend = trend_direction(rates, cfg.TREND_FAST_EMA, cfg.TREND_SLOW_EMA)
+                spread_pips = (float(tick["ask"]) - float(tick["bid"])) / pip_size if pip_size > 0 else 0.0
+                step_ticks = self._step_ticks(atr_value_pips, spread_pips, pip_size, point)
+
+                risk = self._risk_snapshot(symbol, pip_size)
+                risk_off = should_risk_off(risk, risk_cfg)
+
+                trend_on = adx_value >= cfg.TREND_ON_ADX and trend != TrendDirection.FLAT
+                trend_off = adx_value <= cfg.TREND_OFF_ADX or trend == TrendDirection.FLAT
+                if trend_off:
+                    state.stable_bars += 1
+                else:
+                    state.stable_bars = 0
+                stable = state.stable_bars >= cfg.EXHAUSTION_CONFIRM_BARS
+
+                positions = self.broker.our_positions(symbol)
+                buy_count = sum(1 for p in positions if int(p.get("type", 0)) == 0)
+                sell_count = sum(1 for p in positions if int(p.get("type", 0)) == 1)
+                cleanup_done = buy_count == 0 or sell_count == 0
+
+                prev_phase = state.phase
+                state.phase = transition_phase(
+                    state.phase,
+                    TransitionInput(
+                        trend_on=trend_on,
+                        trend_off=trend_off,
+                        stable=stable,
+                        risk_off=risk_off,
+                        cleanup_done=cleanup_done,
+                    ),
+                )
+
+                state.trend = trend
+                state.step_ticks = step_ticks
+
+                recenter_distance = cfg.RECENTER_MOVE_STEPS * step_ticks * point
+                if recenter_distance > 0 and abs(mid - state.center_price) >= recenter_distance:
+                    state.center_price = mid
+
+                if state.phase == Phase.GARBAGE_COLLECT:
+                    losing_side = "BUY" if trend == TrendDirection.DOWN else "SELL"
+                    self.order_mgr.close_positions(symbol, losing_side, cfg.CLEANUP_CLOSE_COUNT)
+
+                intents = self._build_intents(symbol, state, point, cfg.LOT_SIZE)
+                if state.phase != Phase.RISK_OFF:
+                    self.order_mgr.sync_pending(
+                        symbol=symbol,
+                        intents=intents,
+                        max_pending=2 * cfg.MAX_RUNGS_PER_SIDE,
+                    )
+                else:
+                    self.order_mgr.sync_pending(symbol=symbol, intents=[], max_pending=0)
+
+                if prev_phase != state.phase:
+                    print(f"[{symbol}] phase: {prev_phase.value} -> {state.phase.value}")
+
+                state.last_mid = mid
+
+            save_state(cfg.STATE_PATH, self.states)
+            time.sleep(cfg.LOOP_SECONDS)
+
+
+def show_status() -> None:
     broker = MT5Broker()
     if not broker.connect():
-        print("ERROR: Cannot connect to MT5")
+        print("ERROR: cannot connect MT5")
         return
     acc = broker.account_info()
-    print("\n" + "=" * 60)
-    print("  GRID TRADING SYSTEM -- Account Status")
     print("=" * 60)
-    print(f"  Account:    {acc.get('login')}")
-    print(f"  Server:     {acc.get('server')}")
-    print(f"  Balance:    ${acc.get('balance', 0):,.2f}")
-    print(f"  Equity:     ${acc.get('equity', 0):,.2f}")
-    print(f"  Margin:     ${acc.get('margin', 0):,.2f}")
-    print(f"  Free Margin:${acc.get('margin_free', 0):,.2f}")
-    print(f"  Leverage:   1:{acc.get('leverage', 0)}")
-    positions = broker.our_positions()
-    print(f"\n  Open positions (GRID): {len(positions)}")
-    for pos in positions:
-        sym = pos.get("symbol", "?")
-        direction = "BUY" if pos.get("type", 0) == 0 else "SELL"
-        pnl = pos.get("profit", 0)
-        vol = pos.get("volume", 0)
-        print(f"    {sym:12s} {direction:4s} {vol:.2f} lots  PnL=${pnl:+.2f}")
-    print("=" * 60 + "\n")
+    print("PHASED GRID STATUS")
+    print("=" * 60)
+    print(f"Account: {acc.get('login')} @ {acc.get('server')}")
+    print(f"Balance: {acc.get('balance', 0):,.2f}")
+    print(f"Equity:  {acc.get('equity', 0):,.2f}")
+    print(f"Margin:  {acc.get('margin', 0):,.2f}")
+    print("-" * 60)
+    for symbol in cfg.SYMBOLS:
+        positions = broker.our_positions(symbol)
+        print(f"{symbol}: {len(positions)} open positions")
     broker.disconnect()
 
 
-def run_scan(symbols: list[str] | None = None, top_n: int = 10):
-    """Scan symbols and display grid-suitability rankings."""
-    from grid.scanner import GridScanner, FX_UNIVERSE
-
-    broker = MT5Broker()
-    if not broker.connect():
-        print("ERROR: Cannot connect to MT5")
-        return
-
-    universe = symbols or FX_UNIVERSE
-    print(f"\nScanning {len(universe)} symbols for grid suitability ...\n")
-
-    scanner = GridScanner(broker)
-    results = scanner.scan(universe, timeframe="M5", bar_count=500)
-
-    if not results:
-        print("No symbols could be scanned.")
-        broker.disconnect()
-        return
-
-    # Header
-    print("=" * 95)
-    print(f"  {'#':>2}  {'Symbol':<10} {'Score':>6} {'Verdict':<10} "
-          f"{'MeanRev':>8} {'CostEff':>8} {'VolReg':>7} {'SprdStb':>8} "
-          f"{'NoTrend':>8}")
-    print("-" * 95)
-
-    for i, r in enumerate(results[:top_n], 1):
-        # Color-code verdict
-        v = r.verdict
-        print(f"  {i:>2}  {r.symbol:<10} {r.score:>6.1f} {v:<10} "
-              f"{r.mean_reversion:>8.3f} {r.cost_efficiency:>8.3f} "
-              f"{r.vol_regime:>7.3f} {r.spread_stability:>8.3f} "
-              f"{r.trend_absence:>8.3f}")
-
-    # Detailed breakdown of top 3
-    print("\n" + "=" * 95)
-    print("  TOP PICKS — Detailed Analysis")
-    print("=" * 95)
-
-    for r in results[:min(3, len(results))]:
-        d = r.details
-        print(f"\n  {r.symbol} — Score: {r.score}/100 ({r.verdict})")
-        print(f"    Hurst exponent:  {d.get('hurst', 0):.4f}"
-              f"  ({'mean-reverting' if d.get('hurst', 0.5) < 0.45 else 'trending' if d.get('hurst', 0.5) > 0.55 else 'random walk'})")
-        print(f"    Variance ratio:  {d.get('variance_ratio', 1):.4f}"
-              f"  ({'mean-reverting' if d.get('variance_ratio', 1) < 0.9 else 'trending' if d.get('variance_ratio', 1) > 1.1 else 'neutral'})")
-        print(f"    Spread:          {d.get('spread_pips', 0):.1f} pips")
-        print(f"    ATR:             {d.get('atr_pips', 0):.1f} pips")
-        print(f"    Cost/ATR ratio:  {d.get('cost_ratio_pct', 0):.2f}%")
-        print(f"    Ann. volatility: {d.get('ann_vol_pct', 0):.2f}%")
-        print(f"    Trend z-score:   {d.get('trend_z', 0):.2f}")
-        print(f"    Spread CV:       {d.get('spread_cv', 0):.3f}")
-
-    # Bottom 3 (avoid)
-    if len(results) > 3:
-        print("\n" + "-" * 95)
-        print("  WORST CANDIDATES (avoid for grid)")
-        print("-" * 95)
-        for r in results[-min(3, len(results)):]:
-            d = r.details
-            reasons = []
-            if d.get("hurst", 0.5) > 0.55:
-                reasons.append("trending")
-            if d.get("cost_ratio_pct", 0) > 20:
-                reasons.append("expensive")
-            if abs(d.get("trend_z", 0)) > 2:
-                reasons.append("strong trend")
-            if d.get("ann_vol_pct", 0) > 25:
-                reasons.append("too volatile")
-            print(f"  {r.symbol:<10} Score: {r.score:>5.1f}  "
-                  f"Reasons: {', '.join(reasons) if reasons else 'low composite'}")
-
-    print("\n" + "=" * 95)
-    print(f"  Recommendation: Trade the top {min(3, len(results))} symbols")
-    top_syms = [r.symbol for r in results[:min(3, len(results))] if r.score >= 30]
-    if top_syms:
-        print(f"  Set GRID_SYMBOLS={','.join(top_syms)} in .env")
-    print("=" * 95 + "\n")
-
-    broker.disconnect()
-
-
-def main():
+def main() -> None:
     setup_logging()
-    parser = argparse.ArgumentParser(description="Grid Trading System")
-    parser.add_argument("--status", action="store_true",
-                        help="Show account status and exit")
-    parser.add_argument("--scan", action="store_true",
-                        help="Scan symbols for grid suitability")
-    parser.add_argument("--scan-symbols", type=str, default="",
-                        help="Comma-separated symbols to scan (default: full FX universe)")
-    parser.add_argument("--top", type=int, default=10,
-                        help="Number of top results to show (default: 10)")
+    parser = argparse.ArgumentParser(description="Phase-Offset Grid (MT5)")
+    parser.add_argument("--status", action="store_true", help="show account status only")
     args = parser.parse_args()
 
     if args.status:
         show_status()
         return
-    if args.scan:
-        symbols = None
-        if args.scan_symbols:
-            symbols = [s.strip() for s in args.scan_symbols.split(",") if s.strip()]
-        run_scan(symbols, top_n=args.top)
-        return
 
-    engine = GridEngine()
-    engine.start()
+    engine = PhasedGridEngine()
+    engine.run()
 
 
 if __name__ == "__main__":

@@ -1,6 +1,4 @@
-"""
-Legacy entrypoint shim which was there.
-"""
+"""Entrypoint shim for Phase-Offset Grid runtime."""
 
 from app.main import main
 

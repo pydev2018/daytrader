@@ -1,37 +1,34 @@
-# Grid Trading System (MT5 Python)
+# Phased Grid Trading System (MT5)
 
-Grid-only algorithmic trading system for MetaTrader 5 (OANDA MT5). The system runs a regime-aware, cost-aware grid that places a ladder of buy/sell limits around a dynamic anchor, captures mean-reversion, and enforces strict inventory and drawdown controls.
+Single-strategy codebase for the **Phase-Offset (Zipper) Grid**.
 
-## What It Does
-- Connects to MT5 and maintains a live grid on configured symbols (`brokers/mt5.py`, `grid/engine.py`).
-- Computes anchor, spacing, and regime to decide when to trade (`grid/anchor.py`, `grid/spacing.py`, `grid/regime.py`).
-- Reconciles orders idempotently and detects fills (`execution/order_manager.py`).
-- Enforces risk limits with kill-switches and unwind logic (`risk/grid_risk.py`).
-- Persists grid state and risk state to disk.
+The bot runs one state machine only:
+`INIT -> RANGE -> TREND_LOCK -> EXHAUSTION_CONFIRM -> GARBAGE_COLLECT -> RECENTER -> RISK_OFF`
 
-## Quickstart (Windows)
-1. Install dependencies: `pip install -r requirements.txt`
-2. Configure `.env` from `.env.template`
-3. Run:
-   - Live: `python main.py`
-   - Status: `python main.py --status`
+## Strategy Summary
+- **RANGE**: deploys interlocked long/short limit ladders with 50% offset.
+- **TREND_LOCK**: clamps the losing side during directional runs.
+- **EXHAUSTION_CONFIRM**: waits for trend decay before reset.
+- **GARBAGE_COLLECT**: closes residual underwater side in chunks.
+- **RECENTER**: rebuilds around current regime price.
 
-## Configuration
-Configuration lives in `config/settings.py` and `.env`. Key variables:
-- MT5: `MT5_PATH`, `MT5_LOGIN`, `MT5_PASSWORD`, `MT5_SERVER`
-- Symbols: `GRID_SYMBOLS`
-- Risk: `MAX_DRAWDOWN_PCT`, `MAX_INVENTORY_LOTS`, `MAX_LEVERAGE`
-- Grid: `GRID_LEVELS`, `ANCHOR_HALFLIFE_SECONDS`, `GRID_SPACING_K_SIGMA`
+## Quick Start
+1. Install deps: `pip install -r requirements.txt`
+2. Copy `.env.template` to `.env` and set MT5 credentials.
+3. Run live engine: `python main.py`
+4. Check status only: `python main.py --status`
 
-## Docs
-- Architecture: `docs/architecture.md`
-- Control flow: `docs/control-flow.md`
-- Data flow: `docs/data-flow.md`
-- Strategy spec: `docs/grid_strategy_spec.md`
-- Runbook: `docs/runbook.md`
+## Folder Layout
+- `app/` runtime and CLI
+- `strategy/` phased-grid state machine, indicators, planner
+- `execution/` order intents and MT5 order sync
+- `brokers/` MT5 adapter
+- `risk/` risk-off guard rules
+- `storage/` persisted strategy state
+- `config/` validated environment settings
+- `tests/` strategy-focused unit tests
 
-## Backtesting
-Use `backtest/grid_engine.py` with bid/ask data.
-
-## Disclaimer
-This system is not guaranteed profitable. Markets are non-stationary, and the strategy is explicitly risk-managed to fail safely under adverse regimes.
+## Notes
+- MT5 account must be **hedging mode**.
+- Symbol adaptation is dynamic (tick size/digits/pip-aware sizing per symbol).
+- No legacy grid/oco/scanner logic is retained in runtime flow.
