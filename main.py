@@ -1,5 +1,5 @@
 """
-Legacy entrypoint shim.
+Legacy entrypoint shim which was there.
 """
 
 from app.main import main
