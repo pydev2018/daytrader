@@ -1,0 +1,22 @@
+{
+  "symbol_x": "USOIL.sml",
+  "symbol_y": "UKOIL.sml",
+  "timeframe": "D1",
+  "bars": 500,
+  "beta": 1.0509734441160534,
+  "intercept": -0.2693762683619827,
+  "adf_pvalue": 0.3334695478876827,
+  "adf_stat": -1.8970088499597786,
+  "johansen_trace_ratio": 0.5180954293886763,
+  "johansen_pass": false,
+  "hurst": 0.4045281497919581,
+  "half_life_bars": 26.37125820102078,
+  "rolling_pass_ratio": 0.11764705882352941,
+  "pass_engle_granger": false,
+  "pass_all": false,
+  "notes": [
+    "Spread ADF failed (not I(0))",
+    "Johansen trace test failed",
+    "rolling stability too low"
+  ]
+}

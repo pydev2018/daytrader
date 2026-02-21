@@ -51,6 +51,20 @@ LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 MAGIC_NUMBER: int = int(os.getenv("MAGIC_NUMBER", "778899"))
 
 # ═════════════════════════════════════════════════════════════════════════════
+#  COINTEGRATED STRATEGY — PAIR DISCOVERY (PHASE 2)
+# ═════════════════════════════════════════════════════════════════════════════
+_coint_symbols_raw = os.getenv("COINT_SYMBOLS", "BTCUSD,ETHUSD").strip()
+COINT_SYMBOLS: list[str] = [s.strip() for s in _coint_symbols_raw.split(",") if s.strip()]
+COINT_TIMEFRAME: str = os.getenv("COINT_TIMEFRAME", "M5")
+COINT_BAR_COUNT: int = int(os.getenv("COINT_BAR_COUNT", "1500"))
+COINT_ADF_ALPHA: float = float(os.getenv("COINT_ADF_ALPHA", "0.05"))
+COINT_ROLLING_WINDOW: int = int(os.getenv("COINT_ROLLING_WINDOW", "90"))
+COINT_ROLLING_STEP: int = int(os.getenv("COINT_ROLLING_STEP", "25"))
+COINT_MIN_ROLLING_PASS_RATIO: float = float(os.getenv("COINT_MIN_ROLLING_PASS_RATIO", "0.60"))
+COINT_MAX_HURST: float = float(os.getenv("COINT_MAX_HURST", "0.45"))
+COINT_MAX_HALF_LIFE_BARS: float = float(os.getenv("COINT_MAX_HALF_LIFE_BARS", "250"))
+
+# ═════════════════════════════════════════════════════════════════════════════
 #  SYMBOLS & FEEDS
 # ═════════════════════════════════════════════════════════════════════════════
 _symbols_raw = os.getenv("GRID_SYMBOLS", "EURUSD").strip()
@@ -169,6 +183,7 @@ BT_DEFAULT_SLIPPAGE_TICKS: int = int(os.getenv("BT_DEFAULT_SLIPPAGE_TICKS", "1")
 GRID_STATE_PATH = STATE_DIR / "grid_state.json"
 RISK_STATE_PATH = STATE_DIR / "risk_state.json"
 TRADE_JOURNAL_PATH = DATA_DIR / "trade_journal.jsonl"
+PAIR_CHECKS_DIR = DATA_DIR / "pair_checks"
 
 # ═════════════════════════════════════════════════════════════════════════════
 #  PARAMETER VALIDATION
@@ -203,6 +218,25 @@ def _validate():
         errors.append(f"DAILY_LOSS_LIMIT_PCT must be in (0, 100] (got {DAILY_LOSS_LIMIT_PCT})")
     if WEEKLY_LOSS_LIMIT_PCT <= 0 or WEEKLY_LOSS_LIMIT_PCT > 100:
         errors.append(f"WEEKLY_LOSS_LIMIT_PCT must be in (0, 100] (got {WEEKLY_LOSS_LIMIT_PCT})")
+    if COINT_BAR_COUNT < 200:
+        errors.append(f"COINT_BAR_COUNT must be >= 200 (got {COINT_BAR_COUNT})")
+    if COINT_ADF_ALPHA <= 0 or COINT_ADF_ALPHA >= 1:
+        errors.append(f"COINT_ADF_ALPHA must be in (0, 1) (got {COINT_ADF_ALPHA})")
+    if COINT_ROLLING_WINDOW < 100:
+        errors.append(f"COINT_ROLLING_WINDOW must be >= 100 (got {COINT_ROLLING_WINDOW})")
+    if COINT_ROLLING_STEP < 1:
+        errors.append(f"COINT_ROLLING_STEP must be >= 1 (got {COINT_ROLLING_STEP})")
+    if COINT_MIN_ROLLING_PASS_RATIO < 0 or COINT_MIN_ROLLING_PASS_RATIO > 1:
+        errors.append(
+            "COINT_MIN_ROLLING_PASS_RATIO must be in [0, 1] "
+            f"(got {COINT_MIN_ROLLING_PASS_RATIO})"
+        )
+    if COINT_MAX_HURST <= 0 or COINT_MAX_HURST >= 1:
+        errors.append(f"COINT_MAX_HURST must be in (0, 1) (got {COINT_MAX_HURST})")
+    if COINT_MAX_HALF_LIFE_BARS <= 0:
+        errors.append(
+            f"COINT_MAX_HALF_LIFE_BARS must be > 0 (got {COINT_MAX_HALF_LIFE_BARS})"
+        )
     if MAX_LEVERAGE <= 0:
         errors.append(f"MAX_LEVERAGE must be > 0 (got {MAX_LEVERAGE})")
     if GRID_SPACING_K_SIGMA <= 0:

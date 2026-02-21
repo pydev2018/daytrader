@@ -1,6 +1,3 @@
-# Wolf Trading System — Risk management modules
-"""Risk management utilities."""
+"""Risk package for cointegrated strategy branch (freeze-scope phase)."""
 
-from .grid_risk import GridRiskManager, RiskStatus
-
-__all__ = ["GridRiskManager", "RiskStatus"]
+__all__: list[str] = []

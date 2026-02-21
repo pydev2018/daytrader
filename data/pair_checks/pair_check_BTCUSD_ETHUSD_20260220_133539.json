@@ -1,0 +1,20 @@
+{
+  "symbol_x": "BTCUSD",
+  "symbol_y": "ETHUSD",
+  "timeframe": "M5",
+  "bars": 4000,
+  "beta": 0.900816804749145,
+  "intercept": 4.284973956284924,
+  "adf_pvalue": 0.00012775078662676924,
+  "adf_stat": -4.602601855555606,
+  "johansen_trace_ratio": 1.932976306875491,
+  "johansen_pass": true,
+  "hurst": 0.4274068803824061,
+  "half_life_bars": 51.89434740717489,
+  "rolling_pass_ratio": 0.28187919463087246,
+  "pass_engle_granger": true,
+  "pass_all": false,
+  "notes": [
+    "rolling stability too low"
+  ]
+}

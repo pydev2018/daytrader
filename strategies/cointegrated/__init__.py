@@ -1,0 +1,1 @@
+"""Cointegrated strategy package."""

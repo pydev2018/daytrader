@@ -1,0 +1,24 @@
+{
+  "symbol_x": "BTCUSD",
+  "symbol_y": "ETHUSD",
+  "timeframe": "H4",
+  "bars": 3999,
+  "beta": 1.8231896280216555,
+  "intercept": -3.2765502064905583,
+  "adf_pvalue": 0.48501351148214505,
+  "adf_stat": -1.59717282792691,
+  "johansen_trace_ratio": 0.533074636576291,
+  "johansen_pass": false,
+  "hurst": 0.49338130251432144,
+  "half_life_bars": 505.7795182010536,
+  "rolling_pass_ratio": 0.16216216216216217,
+  "pass_engle_granger": false,
+  "pass_all": false,
+  "notes": [
+    "Spread ADF failed (not I(0))",
+    "Johansen trace test failed",
+    "Hurst too high (weak mean-reversion)",
+    "half-life too long or infinite",
+    "rolling stability too low"
+  ]
+}

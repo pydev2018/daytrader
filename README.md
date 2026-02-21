@@ -1,13 +1,10 @@
-# Grid Trading System (MT5 Python)
+# Cointegrated Strategy System (MT5 Python)
 
-Grid-only algorithmic trading system for MetaTrader 5 (OANDA MT5). The system runs a regime-aware, cost-aware grid that places a ladder of buy/sell limits around a dynamic anchor, captures mean-reversion, and enforces strict inventory and drawdown controls.
+Pure cointegrated strategy branch for MetaTrader 5 (OANDA MT5). Legacy single-asset grid runtime code has been removed from this branch.
 
 ## What It Does
-- Connects to MT5 and maintains a live grid on configured symbols (`brokers/mt5.py`, `grid/engine.py`).
-- Computes anchor, spacing, and regime to decide when to trade (`grid/anchor.py`, `grid/spacing.py`, `grid/regime.py`).
-- Reconciles orders idempotently and detects fills (`execution/order_manager.py`).
-- Enforces risk limits with kill-switches and unwind logic (`risk/grid_risk.py`).
-- Persists grid state and risk state to disk.
+- Connects to MT5 and provides a cointegrated-strategy entrypoint (`brokers/mt5.py`, `app/main.py`, `strategies/cointegrated/engine.py`).
+- Freezes legacy grid scope to enable clean phase-by-phase cointegrated implementation.
 
 ## Quickstart (Windows)
 1. Install dependencies: `pip install -r requirements.txt`
@@ -30,8 +27,8 @@ Configuration lives in `config/settings.py` and `.env`. Key variables:
 - Strategy spec: `docs/grid_strategy_spec.md`
 - Runbook: `docs/runbook.md`
 
-## Backtesting
-Use `backtest/grid_engine.py` with bid/ask data.
+## Status
+Current branch state is freeze-scope complete for legacy grid removal. Pair finder and spread execution are implemented in upcoming phases.
 
 Archived scripts are organized under `obsolete/`.
 

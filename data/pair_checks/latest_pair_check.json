@@ -1,0 +1,22 @@
+{
+  "symbol_x": "US100",
+  "symbol_y": "US500",
+  "timeframe": "D1",
+  "bars": 499,
+  "beta": 1.2399677422416826,
+  "intercept": -0.8113098650534578,
+  "adf_pvalue": 0.09474724773494392,
+  "adf_stat": -2.591593259467818,
+  "johansen_trace_ratio": 0.7132627444845406,
+  "johansen_pass": false,
+  "hurst": 0.43194269948654246,
+  "half_life_bars": 23.774640816823066,
+  "rolling_pass_ratio": 0.0625,
+  "pass_engle_granger": false,
+  "pass_all": false,
+  "notes": [
+    "Spread ADF failed (not I(0))",
+    "Johansen trace test failed",
+    "rolling stability too low"
+  ]
+}

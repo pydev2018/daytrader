@@ -1,0 +1,22 @@
+{
+  "symbol_x": "USOIL.sml",
+  "symbol_y": "UKOIL.sml",
+  "timeframe": "D1",
+  "bars": 3958,
+  "beta": 0.9645034072400964,
+  "intercept": 0.07606006100518847,
+  "adf_pvalue": 1.6148811805241242e-06,
+  "adf_stat": -5.551633909292677,
+  "johansen_trace_ratio": 1.9705231020657898,
+  "johansen_pass": true,
+  "hurst": 0.49374800442548544,
+  "half_life_bars": 52.61436734427468,
+  "rolling_pass_ratio": 0.2857142857142857,
+  "pass_engle_granger": true,
+  "pass_all": false,
+  "notes": [
+    "USOIL.sml is already stationary (I(0)). Invalid for cointegration.",
+    "Hurst too high (weak mean-reversion)",
+    "rolling stability too low"
+  ]
+}

@@ -1,6 +1,3 @@
-# Wolf Trading System — Execution modules
-"""Execution utilities."""
+"""Execution package for cointegrated strategy branch (freeze-scope phase)."""
 
-from .order_manager import OrderManager, FillEvent, TradeJournal
-
-__all__ = ["OrderManager", "FillEvent", "TradeJournal"]
+__all__: list[str] = []

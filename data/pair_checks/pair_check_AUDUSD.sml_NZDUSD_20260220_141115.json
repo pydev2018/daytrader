@@ -1,0 +1,23 @@
+{
+  "symbol_x": "AUDUSD.sml",
+  "symbol_y": "NZDUSD",
+  "timeframe": "D1",
+  "bars": 4000,
+  "beta": 1.425724512344221,
+  "intercept": 0.26335831318657554,
+  "adf_pvalue": 0.060919926919349485,
+  "adf_stat": -2.78180660586307,
+  "johansen_trace_ratio": 0.8586591741372145,
+  "johansen_pass": false,
+  "hurst": 0.5082102869317158,
+  "half_life_bars": 182.7067608863107,
+  "rolling_pass_ratio": 0.10738255033557047,
+  "pass_engle_granger": false,
+  "pass_all": false,
+  "notes": [
+    "Spread ADF failed (not I(0))",
+    "Johansen trace test failed",
+    "Hurst too high (weak mean-reversion)",
+    "rolling stability too low"
+  ]
+}
