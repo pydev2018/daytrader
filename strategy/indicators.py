@@ -66,3 +66,60 @@ def trend_direction(df: pd.DataFrame, fast_period: int, slow_period: int) -> Tre
     if fast.iloc[-1] < slow.iloc[-1] and fast_slope < 0 and slow_slope < 0:
         return TrendDirection.DOWN
     return TrendDirection.FLAT
+
+
+def kaufman_er(df: pd.DataFrame, period: int = 10) -> float:
+    close = df["close"]
+    if len(close) <= period:
+        return 0.0
+    change = abs(close.iloc[-1] - close.iloc[-(period+1)])
+    volatility = abs(close.diff()).tail(period).sum()
+    if volatility == 0:
+        return 0.0
+    return float(change / volatility)
+
+
+def linear_regression_r2(df: pd.DataFrame, period: int = 14) -> float:
+    close = df["close"]
+    if len(close) < period:
+        return 0.0
+    y = close.tail(period).values
+    x = np.arange(period)
+    correlation_matrix = np.corrcoef(x, y)
+    correlation_xy = correlation_matrix[0, 1]
+    r_squared = correlation_xy**2
+    if np.isnan(r_squared):
+        return 0.0
+    return float(r_squared)
+
+
+def donchian_channel(df: pd.DataFrame, period: int = 20) -> tuple[float, float]:
+    if len(df) < period:
+        return 0.0, 0.0
+    high = df["high"].tail(period).max()
+    low = df["low"].tail(period).min()
+    return float(high), float(low)
+
+
+def is_volatility_squeeze(df: pd.DataFrame, period: int = 20) -> bool:
+    if len(df) < period:
+        return False
+    close = df["close"]
+    high = df["high"]
+    low = df["low"]
+    
+    sma = close.rolling(period).mean()
+    std = close.rolling(period).std()
+    bb_upper = sma + (2.0 * std)
+    bb_lower = sma - (2.0 * std)
+    
+    tr = pd.concat(
+        [(high - low), (high - close.shift()).abs(), (low - close.shift()).abs()],
+        axis=1,
+    ).max(axis=1)
+    atr = tr.rolling(period).mean()
+    kc_upper = sma + (1.5 * atr)
+    kc_lower = sma - (1.5 * atr)
+    
+    squeeze_on = (bb_upper.iloc[-1] < kc_upper.iloc[-1]) and (bb_lower.iloc[-1] > kc_lower.iloc[-1])
+    return bool(squeeze_on)

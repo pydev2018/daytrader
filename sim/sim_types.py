@@ -16,6 +16,7 @@ class SymbolSpec:
 class PendingOrder:
     symbol: str
     side: str
+    order_type: str
     price: float
     tp: float
     volume: float

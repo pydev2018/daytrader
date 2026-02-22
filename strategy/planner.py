@@ -7,8 +7,10 @@ from strategy.types import Phase, TrendDirection
 
 @dataclass
 class GridPlan:
-    long_entries: list[float]
-    short_entries: list[float]
+    long_limits: list[float]
+    long_stops: list[float]
+    short_limits: list[float]
+    short_stops: list[float]
     step_price: float
 
 
@@ -23,17 +25,30 @@ def build_grid_plan(
 ) -> GridPlan:
     offset = step_price * offset_ratio
 
-    long_entries = [center_price - (level + 1) * step_price for level in range(levels)]
-    short_entries = [center_price + offset + level * step_price for level in range(levels)]
+    long_limits = [center_price - (level + 1) * step_price for level in range(levels)]
+    long_stops = [center_price + (level + 1) * step_price for level in range(levels)]
+    
+    short_limits = [center_price + offset + level * step_price for level in range(levels)]
+    short_stops = [center_price - offset - level * step_price for level in range(levels)]
 
     if phase == Phase.TREND_LOCK:
         if trend == TrendDirection.UP:
-            short_entries = []
+            short_limits = []
+            short_stops = []
         elif trend == TrendDirection.DOWN:
-            long_entries = []
+            long_limits = []
+            long_stops = []
 
     if phase in {Phase.EXHAUSTION_CONFIRM, Phase.GARBAGE_COLLECT, Phase.RISK_OFF}:
-        long_entries = []
-        short_entries = []
+        long_limits = []
+        long_stops = []
+        short_limits = []
+        short_stops = []
 
-    return GridPlan(long_entries=long_entries, short_entries=short_entries, step_price=step_price)
+    return GridPlan(
+        long_limits=long_limits,
+        long_stops=long_stops,
+        short_limits=short_limits,
+        short_stops=short_stops,
+        step_price=step_price,
+    )

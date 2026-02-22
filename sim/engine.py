@@ -9,9 +9,18 @@ import time
 import pandas as pd
 
 from risk.guards import RiskConfig, RiskSnapshot, should_risk_off
-from sim.config import BacktestConfig
-from sim.types import FillEvent, PendingOrder, Position, SymbolSpec
-from strategy.indicators import adx, atr_pips, trend_direction
+from sim.sim_config import BacktestConfig
+from sim.sim_types import FillEvent, PendingOrder, Position, SymbolSpec
+from strategy.indicators import (
+    adx,
+    atr_pips,
+    trend_direction,
+    kaufman_er,
+    linear_regression_r2,
+    donchian_channel,
+    is_volatility_squeeze,
+)
+from strategy.llm_oracle import LLMOracle
 from strategy.planner import build_grid_plan
 from strategy.state_machine import TransitionInput, transition_phase
 from strategy.types import Phase, SymbolRuntime, TrendDirection
@@ -42,6 +51,7 @@ class BacktestEngine:
         self.positions: dict[str, list[Position]] = defaultdict(list)
         self.events: list[FillEvent] = []
         self.phase_changes: list[tuple[datetime, str, str, str]] = []
+        self.oracle = LLMOracle(model=config.llm_model) if config.use_llm_oracle else None
         self._row_lookup: dict[str, dict[datetime, pd.Series]] = {
             symbol: {row["time"]: row for _, row in df.iterrows()}
             for symbol, df in market_data.items()
@@ -208,7 +218,7 @@ class BacktestEngine:
                 swap = self.cfg.short_swap_per_lot_per_day * pos.volume * delta_days
             self.balance -= swap
 
-    def _maybe_place_anchor(self, symbol: str, state: SymbolRuntime, row: pd.Series) -> None:
+    def _maybe_place_anchor(self, symbol: str, state: SymbolRuntime, row: pd.Series, step_price: float) -> None:
         if not self.cfg.start_with_anchor or state.anchor_initialized:
             return
         if self.positions[symbol]:
@@ -217,15 +227,19 @@ class BacktestEngine:
 
         mid = (float(row["open"]) + float(row["close"])) / 2.0
         volume = self.cfg.lot_size * self.cfg.anchor_lot_mult
+        
+        offset = step_price * self.cfg.offset_ratio
+
         self.positions[symbol].append(
-            Position(symbol=symbol, side="BUY", entry_price=mid, tp=mid, volume=volume, opened_at=row["time"], is_anchor=True, entry_phase="INIT")
+            Position(symbol=symbol, side="BUY", entry_price=mid, tp=mid + step_price, volume=volume, opened_at=row["time"], is_anchor=True, entry_phase="INIT")
         )
         self.positions[symbol].append(
-            Position(symbol=symbol, side="SELL", entry_price=mid, tp=mid, volume=volume, opened_at=row["time"], is_anchor=True, entry_phase="INIT")
+            Position(symbol=symbol, side="SELL", entry_price=mid, tp=mid - offset, volume=volume, opened_at=row["time"], is_anchor=True, entry_phase="INIT")
         )
         fee = self._commission(volume) * 2
         self.balance -= fee
         state.anchor_initialized = True
+        state.center_price = mid
 
     def _create_pending_from_plan(self, symbol: str, state: SymbolRuntime, row: pd.Series) -> None:
         spec = self.specs[symbol]
@@ -244,29 +258,55 @@ class BacktestEngine:
         )
 
         new_orders: list[PendingOrder] = []
-        for price in plan.long_entries:
+        for price in plan.long_limits:
             new_orders.append(
                 PendingOrder(
                     symbol=symbol,
                     side="BUY",
+                    order_type="LIMIT",
                     price=price,
                     tp=price + step_price,
                     volume=self.cfg.lot_size,
                     active_from=row["time"],
                 )
             )
-        for price in plan.short_entries:
+        for price in plan.long_stops:
+            new_orders.append(
+                PendingOrder(
+                    symbol=symbol,
+                    side="BUY",
+                    order_type="STOP",
+                    price=price,
+                    tp=price + step_price,
+                    volume=self.cfg.lot_size,
+                    active_from=row["time"],
+                )
+            )
+        for price in plan.short_limits:
             new_orders.append(
                 PendingOrder(
                     symbol=symbol,
                     side="SELL",
+                    order_type="LIMIT",
                     price=price,
                     tp=price - step_price,
                     volume=self.cfg.lot_size,
                     active_from=row["time"],
                 )
             )
-        self.pending[symbol] = new_orders[: 2 * self.cfg.max_rungs_per_side]
+        for price in plan.short_stops:
+            new_orders.append(
+                PendingOrder(
+                    symbol=symbol,
+                    side="SELL",
+                    order_type="STOP",
+                    price=price,
+                    tp=price - step_price,
+                    volume=self.cfg.lot_size,
+                    active_from=row["time"],
+                )
+            )
+        self.pending[symbol] = new_orders[: 4 * self.cfg.max_rungs_per_side]
 
     def _fill_entries(
         self,
@@ -283,24 +323,36 @@ class BacktestEngine:
                 remaining.append(order)
                 continue
 
+            spread_pips = self._spread_pips(symbol, row)
+            spread_price = spread_pips * spec.pip_size
+
             touched = False
-            if order.side == "BUY" and float(row["low"]) <= order.price:
-                touched = True
-            if order.side == "SELL" and float(row["high"]) >= order.price:
-                touched = True
+            if order.side == "BUY":
+                if order.order_type == "LIMIT" and float(row["low"]) + spread_price <= order.price:
+                    touched = True
+                elif order.order_type == "STOP" and float(row["high"]) + spread_price >= order.price:
+                    touched = True
+            elif order.side == "SELL":
+                if order.order_type == "LIMIT" and float(row["high"]) >= order.price:
+                    touched = True
+                elif order.order_type == "STOP" and float(row["low"]) <= order.price:
+                    touched = True
 
             if not touched:
                 remaining.append(order)
                 continue
 
-            spread_pips = self._spread_pips(symbol, row)
             slip_pips = self._slippage_pips(symbol, row, trend_on)
             half_spread = 0.5 * spread_pips * spec.pip_size
             slip_price = slip_pips * spec.pip_size
-            if order.side == "BUY":
-                fill_price = order.price + half_spread + slip_price
+            
+            if order.order_type == "LIMIT":
+                fill_price = order.price
             else:
-                fill_price = order.price - half_spread - slip_price
+                if order.side == "BUY":
+                    fill_price = order.price + slip_price
+                else:
+                    fill_price = order.price - slip_price
 
             paired_reserve = 0.0
             if (
@@ -348,28 +400,22 @@ class BacktestEngine:
         spec = self.specs[symbol]
         survivors: list[Position] = []
         for pos in self.positions[symbol]:
-            if pos.is_anchor:
-                survivors.append(pos)
-                continue
+            spread_pips = self._spread_pips(symbol, row)
+            spread_price = spread_pips * spec.pip_size
 
             touched = False
             if pos.side == "BUY" and float(row["high"]) >= pos.tp:
                 touched = True
-            if pos.side == "SELL" and float(row["low"]) <= pos.tp:
+            if pos.side == "SELL" and float(row["low"]) + spread_price <= pos.tp:
                 touched = True
 
             if not touched:
                 survivors.append(pos)
                 continue
 
-            spread_pips = self._spread_pips(symbol, row)
             slip_pips = self._slippage_pips(symbol, row, trend_on)
-            half_spread = 0.5 * spread_pips * spec.pip_size
-            slip_price = slip_pips * spec.pip_size
-            if pos.side == "BUY":
-                exit_price = pos.tp - half_spread - slip_price
-            else:
-                exit_price = pos.tp + half_spread + slip_price
+            
+            exit_price = pos.tp
 
             pnl = self._pip_pnl(symbol, pos.side, pos.entry_price, exit_price, pos.volume)
             fee = self._commission(pos.volume)
@@ -402,16 +448,23 @@ class BacktestEngine:
         if not self.positions[symbol]:
             return 0
         spec = self.specs[symbol]
+        spread_pips = self._spread_pips(symbol, row)
+        spread_price = spread_pips * spec.pip_size
+        
+        def _est_pnl(p: Position) -> float:
+            exit_p = float(row["close"]) if p.side == "BUY" else float(row["close"]) + spread_price
+            return self._pip_pnl(symbol, p.side, p.entry_price, exit_p, p.volume)
+
         sorted_positions = sorted(
-            [p for p in self.positions[symbol] if not p.is_anchor],
-            key=lambda p: self._pip_pnl(symbol, p.side, p.entry_price, float(row["close"]), p.volume),
+            [p for p in self.positions[symbol]],
+            key=_est_pnl,
         )
         to_close: list[Position] = []
         loss_budget = state.buffer_pnl if self.cfg.protect_oscillation_bank else None
         for pos in sorted_positions:
             if len(to_close) >= self.cfg.risk_off_unwind_per_cycle:
                 break
-            est_pnl = self._pip_pnl(symbol, pos.side, pos.entry_price, float(row["close"]), pos.volume)
+            est_pnl = _est_pnl(pos)
             if loss_budget is not None and est_pnl < 0 and abs(est_pnl) > loss_budget:
                 continue
             to_close.append(pos)
@@ -427,12 +480,12 @@ class BacktestEngine:
             if id(pos) in close_set:
                 spread_pips = self._spread_pips(symbol, row)
                 slip_pips = self._slippage_pips(symbol, row, trend_on=True)
-                half_spread = 0.5 * spread_pips * spec.pip_size
+                spread_price = spread_pips * spec.pip_size
                 slip_price = slip_pips * spec.pip_size
                 if pos.side == "BUY":
-                    exit_price = float(row["close"]) - half_spread - slip_price
+                    exit_price = float(row["close"]) - slip_price
                 else:
-                    exit_price = float(row["close"]) + half_spread + slip_price
+                    exit_price = float(row["close"]) + spread_price + slip_price
 
                 pnl = self._pip_pnl(symbol, pos.side, pos.entry_price, exit_price, pos.volume)
                 fee = self._commission(pos.volume)
@@ -461,19 +514,25 @@ class BacktestEngine:
     def _garbage_collect(self, symbol: str, row: pd.Series, trend: TrendDirection, state: SymbolRuntime) -> int:
         candidates = []
         for pos in self.positions[symbol]:
-            if pos.is_anchor:
-                continue
             if trend == TrendDirection.DOWN and pos.side == "BUY":
                 candidates.append(pos)
             elif trend != TrendDirection.DOWN and pos.side == "SELL":
                 candidates.append(pos)
+
+        spec = self.specs[symbol]
+        spread_pips = self._spread_pips(symbol, row)
+        spread_price = spread_pips * spec.pip_size
+        
+        def _est_pnl(p: Position) -> float:
+            exit_p = float(row["close"]) if p.side == "BUY" else float(row["close"]) + spread_price
+            return self._pip_pnl(symbol, p.side, p.entry_price, exit_p, p.volume)
 
         to_close: list[Position] = []
         loss_budget = state.buffer_pnl if self.cfg.protect_oscillation_bank else None
         for pos in candidates:
             if len(to_close) >= self.cfg.cleanup_close_count:
                 break
-            est_pnl = self._pip_pnl(symbol, pos.side, pos.entry_price, float(row["close"]), pos.volume)
+            est_pnl = _est_pnl(pos)
             if loss_budget is not None and est_pnl < 0 and abs(est_pnl) > loss_budget:
                 continue
             to_close.append(pos)
@@ -482,7 +541,6 @@ class BacktestEngine:
 
         if not to_close:
             return 0
-        spec = self.specs[symbol]
 
         survivors = []
         close_set = set(id(p) for p in to_close)
@@ -490,12 +548,12 @@ class BacktestEngine:
             if id(pos) in close_set:
                 spread_pips = self._spread_pips(symbol, row)
                 slip_pips = self._slippage_pips(symbol, row, trend_on=False)
-                half_spread = 0.5 * spread_pips * spec.pip_size
+                spread_price = spread_pips * spec.pip_size
                 slip_price = slip_pips * spec.pip_size
                 if pos.side == "BUY":
-                    exit_price = float(row["close"]) - half_spread - slip_price
+                    exit_price = float(row["close"]) - slip_price
                 else:
-                    exit_price = float(row["close"]) + half_spread + slip_price
+                    exit_price = float(row["close"]) + spread_price + slip_price
                 pnl = self._pip_pnl(symbol, pos.side, pos.entry_price, exit_price, pos.volume)
                 fee = self._commission(pos.volume)
                 self.balance += pnl - fee
@@ -553,7 +611,6 @@ class BacktestEngine:
                     continue
 
                 self._apply_swap(symbol, ts, delta_days)
-                self._maybe_place_anchor(symbol, state, row)
 
                 spec = self.specs[symbol]
                 mid = (float(row["open"]) + float(row["close"])) / 2.0
@@ -566,6 +623,8 @@ class BacktestEngine:
                 spread = self._spread_pips(symbol, row)
                 step_ticks = self._step_ticks(symbol, atr_value, spread)
                 step_price = step_ticks * spec.point
+
+                self._maybe_place_anchor(symbol, state, row, step_price)
 
                 state.trend_persist_bars = self._trend_persistence(state.trend, trend, state.trend_persist_bars)
 
@@ -594,7 +653,7 @@ class BacktestEngine:
                 cleanup_done = buy_count == 0 or sell_count == 0
 
                 prev_phase = state.phase
-                state.phase = transition_phase(
+                proposed_phase = transition_phase(
                     state.phase,
                     TransitionInput(
                         trend_on=trend_on,
@@ -604,6 +663,42 @@ class BacktestEngine:
                         cleanup_done=cleanup_done,
                     ),
                 )
+
+                # LLM Oracle Override Logic
+                if self.cfg.use_llm_oracle and self.oracle:
+                    state.bars_since_llm_eval += 1
+                    if proposed_phase != state.phase or state.bars_since_llm_eval >= self.cfg.llm_eval_interval_bars:
+                        # Get the window up to the current timestamp
+                        current_idx = self._row_index_lookup[symbol].get(ts)
+                        if current_idx is not None and current_idx >= 20:
+                            window = self.market_data[symbol].iloc[current_idx - 19 : current_idx + 1]
+                            
+                            # Calculate advanced quantitative indicators
+                            er_val = kaufman_er(window, period=10)
+                            r2_val = linear_regression_r2(window, period=14)
+                            d_high, d_low = donchian_channel(window, period=20)
+                            squeeze_active = is_volatility_squeeze(window, period=20)
+
+                            llm_phase = self.oracle.evaluate_regime(
+                                symbol=symbol,
+                                window=window,
+                                current_phase=state.phase,
+                                open_positions=len(self.positions[symbol]),
+                                unrealized_pnl=self._unrealized_pnl(symbol, mid),
+                                realized_chop=state.chop_pnl,
+                                realized_trend=state.buffer_pnl,
+                                atr_pips=atr_value,
+                                kaufman_er=er_val,
+                                linreg_r2=r2_val,
+                                donchian_high=d_high,
+                                donchian_low=d_low,
+                                is_squeeze=squeeze_active,
+                            )
+                            if llm_phase:
+                                proposed_phase = llm_phase
+                            state.bars_since_llm_eval = 0
+
+                state.phase = proposed_phase
                 state.trend = trend
                 state.step_ticks = step_ticks
 

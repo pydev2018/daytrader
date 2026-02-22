@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import pandas as pd
 
 from brokers.mt5 import MT5Broker
-from sim.types import SymbolSpec
+from sim.sim_types import SymbolSpec
 
 
 def _load_cached_history_with_fallback(

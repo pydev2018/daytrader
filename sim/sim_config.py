@@ -27,10 +27,10 @@ class BacktestConfig:
     exhaustion_confirm_bars: int = 4
     slow_trend_bars: int = 5
     slow_trend_min_move_steps: float = 1.0
-    max_spread_pips: float = 3.0
-    max_margin_usage_pct: float = 70.0
-    max_drawdown_pct: float = 18.0
-    max_net_delta_lots: float = 0.50
+    max_spread_pips: float = 10.0
+    max_margin_usage_pct: float = 90.0
+    max_drawdown_pct: float = 50.0
+    max_net_delta_lots: float = 10.0
     cleanup_close_count: int = 2
     risk_off_unwind_per_cycle: int = 2
     protect_oscillation_bank: bool = True
@@ -46,3 +46,8 @@ class BacktestConfig:
     trend_slippage_mult: float = 0.10
     random_seed: int = 42
     progress_every_steps: int = 2000
+
+    # LLM Oracle Settings
+    use_llm_oracle: bool = False
+    llm_model: str = "gpt-5.2"
+    llm_eval_interval_bars: int = 12  # Evaluate every 1 hour (if 5m bars)

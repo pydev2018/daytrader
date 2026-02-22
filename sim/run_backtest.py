@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import time
 
-from sim.config import BacktestConfig
+from sim.sim_config import BacktestConfig
 from sim.data import load_mt5_history
 from sim.engine import BacktestEngine
 
