@@ -31,4 +31,6 @@ class SymbolRuntime:
     chop_pnl: float = 0.0
     buffer_pnl: float = 0.0
     last_mid: float = 0.0
+    anchor_initialized: bool = False
+    trend_persist_bars: int = 0
     metadata: dict[str, float | int | str] = field(default_factory=dict)

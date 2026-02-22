@@ -1,0 +1,7633 @@
+{
+  "config": {
+    "start": "2026-01-01T00:00:00+00:00",
+    "end": "2026-02-15T23:55:00+00:00",
+    "timeframe": "M5",
+    "initial_balance": 10000.0,
+    "leverage": 30.0,
+    "lot_size": 0.01,
+    "max_rungs_per_side": 6,
+    "offset_ratio": 0.5,
+    "step_atr_mult": 0.9,
+    "step_spread_mult": 12.0,
+    "min_step_ticks": 5,
+    "recenter_move_steps": 1.5,
+    "atr_period": 14,
+    "adx_period": 14,
+    "trend_fast_ema": 34,
+    "trend_slow_ema": 89,
+    "trend_on_adx": 25.0,
+    "trend_off_adx": 20.0,
+    "exhaustion_confirm_bars": 4,
+    "slow_trend_bars": 5,
+    "slow_trend_min_move_steps": 1.0,
+    "max_spread_pips": 3.0,
+    "max_margin_usage_pct": 70.0,
+    "max_drawdown_pct": 18.0,
+    "max_net_delta_lots": 0.5,
+    "cleanup_close_count": 2,
+    "risk_off_unwind_per_cycle": 2,
+    "protect_oscillation_bank": true,
+    "paired_ledger_enabled": true,
+    "paired_risk_steps": 1.0,
+    "start_with_anchor": true,
+    "anchor_lot_mult": 1.0,
+    "commission_per_lot_per_side": 0.0,
+    "long_swap_per_lot_per_day": 0.0,
+    "short_swap_per_lot_per_day": 0.0,
+    "base_slippage_pips": 0.1,
+    "range_slippage_mult": 0.05,
+    "trend_slippage_mult": 0.1,
+    "random_seed": 42,
+    "progress_every_steps": 4000
+  },
+  "initial_balance": 10000.0,
+  "final_balance": 10012.930061130945,
+  "final_equity": 9958.191402285524,
+  "max_drawdown_pct": 0.8621231055054265,
+  "total_return_pct": -0.4180859771447649,
+  "events": [
+    {
+      "timestamp": "2026-01-02T09:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6103918358346925,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.2816416530739008
+    },
+    {
+      "timestamp": "2026-01-02T09:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6103754376882164,
+      "volume": 0.01,
+      "pnl": 0.011981343871307688,
+      "fee": 0.0,
+      "slip_pips": 0.7043768821639002
+    },
+    {
+      "timestamp": "2026-01-02T09:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1739570145072373,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.629854927628237
+    },
+    {
+      "timestamp": "2026-01-02T09:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1734476617483198,
+      "volume": 0.01,
+      "pnl": 0.5093527589175029,
+      "fee": 0.0,
+      "slip_pips": 0.9766174831969952
+    },
+    {
+      "timestamp": "2026-01-02T09:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6080867217457715,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.432782542284548
+    },
+    {
+      "timestamp": "2026-01-02T09:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6080756201358921,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.9937986410772721
+    },
+    {
+      "timestamp": "2026-01-02T10:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6080599967600224,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.7000323997771787
+    },
+    {
+      "timestamp": "2026-01-02T10:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6081276528549437,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.5734714505620953
+    },
+    {
+      "timestamp": "2026-01-02T10:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6079712622029072,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.38737797092615
+    },
+    {
+      "timestamp": "2026-01-02T10:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.60854356511224,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.2643488775986
+    },
+    {
+      "timestamp": "2026-01-02T10:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6076179256265868,
+      "volume": 0.01,
+      "pnl": 0.34252697508819796,
+      "fee": 0.0,
+      "slip_pips": 1.5292562658661495
+    },
+    {
+      "timestamp": "2026-01-02T10:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6076883191291935,
+      "volume": 0.01,
+      "pnl": 0.28298238156022965,
+      "fee": 0.0,
+      "slip_pips": 1.6331912919373015
+    },
+    {
+      "timestamp": "2026-01-02T10:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6076109619289012,
+      "volume": 0.01,
+      "pnl": 0.3280883439920229,
+      "fee": 0.0,
+      "slip_pips": 1.459619289010251
+    },
+    {
+      "timestamp": "2026-01-02T10:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6075572078648372,
+      "volume": 0.01,
+      "pnl": 0.4167969591028321,
+      "fee": 0.0,
+      "slip_pips": 1.522078648373754
+    },
+    {
+      "timestamp": "2026-01-02T10:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6077735583108697,
+      "volume": 0.01,
+      "pnl": 0.14445280865497753,
+      "fee": 0.0,
+      "slip_pips": 1.6855831086949045
+    },
+    {
+      "timestamp": "2026-01-02T10:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6083297541286719,
+      "volume": 0.01,
+      "pnl": 0.15622149255326223,
+      "fee": 0.0,
+      "slip_pips": 1.6475412867184973
+    },
+    {
+      "timestamp": "2026-01-02T10:25:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1727955676410817,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.9443235891814783
+    },
+    {
+      "timestamp": "2026-01-02T10:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6081599425101143,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.2505748988563659
+    },
+    {
+      "timestamp": "2026-01-02T10:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1727805854571103,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.0941454288941783
+    },
+    {
+      "timestamp": "2026-01-02T10:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6081773253458336,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.0767465416635382
+    },
+    {
+      "timestamp": "2026-01-02T10:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.172823919985287,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.6608001471269516
+    },
+    {
+      "timestamp": "2026-01-02T10:40:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6081125465151254,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.1745348487469403
+    },
+    {
+      "timestamp": "2026-01-02T10:40:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1728352043372288,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5479566277103842
+    },
+    {
+      "timestamp": "2026-01-02T10:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.607986247258507,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.537527414930409
+    },
+    {
+      "timestamp": "2026-01-02T10:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6080396592222155,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.0534077778442514
+    },
+    {
+      "timestamp": "2026-01-02T10:50:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1728124833725058,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.7751662749389169
+    },
+    {
+      "timestamp": "2026-01-02T10:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6080342161336068,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.0078386639321595
+    },
+    {
+      "timestamp": "2026-01-02T10:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6086441183592204,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.0088164077950383
+    },
+    {
+      "timestamp": "2026-01-02T10:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.172812440090138,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.7755990986158443
+    },
+    {
+      "timestamp": "2026-01-02T11:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.608047529205404,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.8747079459597022
+    },
+    {
+      "timestamp": "2026-01-02T11:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6086536645628076,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.9133543719221249
+    },
+    {
+      "timestamp": "2026-01-02T11:00:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.172885287136193,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5971286380700811
+    },
+    {
+      "timestamp": "2026-01-02T11:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1727238606461503,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.661393538495227
+    },
+    {
+      "timestamp": "2026-01-02T11:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1734278596351442,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.821403648557382
+    },
+    {
+      "timestamp": "2026-01-02T11:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.609193375648399,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.7662435160113895
+    },
+    {
+      "timestamp": "2026-01-02T11:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.172813753319426,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.7624668057379667
+    },
+    {
+      "timestamp": "2026-01-02T11:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6091062333216628,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.5876667833731313
+    },
+    {
+      "timestamp": "2026-01-02T11:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1727814647858192,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.085352141805414
+    },
+    {
+      "timestamp": "2026-01-02T11:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1734957498878424,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.1425011215728391
+    },
+    {
+      "timestamp": "2026-01-02T11:25:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.17281847887273,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.7152112726964934
+    },
+    {
+      "timestamp": "2026-01-02T11:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.173025273149379,
+      "volume": 0.01,
+      "pnl": 0.4025864857650774,
+      "fee": 0.0,
+      "slip_pips": 0.7527314937946312
+    },
+    {
+      "timestamp": "2026-01-02T11:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1730147331901382,
+      "volume": 0.01,
+      "pnl": 0.481016697704284,
+      "fee": 0.0,
+      "slip_pips": 0.6473319013851153
+    },
+    {
+      "timestamp": "2026-01-02T11:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1728223536275892,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.6764637241044662
+    },
+    {
+      "timestamp": "2026-01-02T11:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6092318931082052,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.8310689179480071
+    },
+    {
+      "timestamp": "2026-01-02T11:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1728262532503604,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.637467496394088
+    },
+    {
+      "timestamp": "2026-01-02T11:40:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.608777486543929,
+      "volume": 0.01,
+      "pnl": 0.3038703417040857,
+      "fee": 0.0,
+      "slip_pips": 0.7248654392891525
+    },
+    {
+      "timestamp": "2026-01-02T11:40:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6087752296494786,
+      "volume": 0.01,
+      "pnl": 0.24184860312733342,
+      "fee": 0.0,
+      "slip_pips": 0.7022964947862476
+    },
+    {
+      "timestamp": "2026-01-02T11:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6087799705405836,
+      "volume": 0.01,
+      "pnl": 0.3301982753840381,
+      "fee": 0.0,
+      "slip_pips": 1.1497054058359006
+    },
+    {
+      "timestamp": "2026-01-02T11:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6082300487527756,
+      "volume": 0.01,
+      "pnl": 0.30254092123914594,
+      "fee": 0.0,
+      "slip_pips": 0.5504875277565426
+    },
+    {
+      "timestamp": "2026-01-02T11:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6082268323821252,
+      "volume": 0.01,
+      "pnl": 0.31186592579670447,
+      "fee": 0.0,
+      "slip_pips": 0.5183238212528342
+    },
+    {
+      "timestamp": "2026-01-02T11:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.172258406176286,
+      "volume": 0.01,
+      "pnl": 0.5371614647957657,
+      "fee": 0.0,
+      "slip_pips": 0.2840617628626509
+    },
+    {
+      "timestamp": "2026-01-02T11:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1722573617956997,
+      "volume": 0.01,
+      "pnl": 0.5232236614105545,
+      "fee": 0.0,
+      "slip_pips": 0.27361795700019825
+    },
+    {
+      "timestamp": "2026-01-02T11:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.172257735355843,
+      "volume": 0.01,
+      "pnl": 0.566184629444022,
+      "fee": 0.0,
+      "slip_pips": 0.2773535584332446
+    },
+    {
+      "timestamp": "2026-01-02T11:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1722620882548198,
+      "volume": 0.01,
+      "pnl": 0.5731160824089532,
+      "fee": 0.0,
+      "slip_pips": 0.3208825482013725
+    },
+    {
+      "timestamp": "2026-01-02T11:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1722602122300039,
+      "volume": 0.01,
+      "pnl": 0.5522711425018922,
+      "fee": 0.0,
+      "slip_pips": 0.3021223000410855
+    },
+    {
+      "timestamp": "2026-01-02T11:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1722599593515366,
+      "volume": 0.01,
+      "pnl": 0.5524807386014796,
+      "fee": 0.0,
+      "slip_pips": 0.29959351536841067
+    },
+    {
+      "timestamp": "2026-01-02T11:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1721971124012132,
+      "volume": 0.01,
+      "pnl": 0.6881747349798405,
+      "fee": 0.0,
+      "slip_pips": 0.27112401213292736
+    },
+    {
+      "timestamp": "2026-01-02T11:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1722607393241864,
+      "volume": 0.01,
+      "pnl": 0.46312132196391076,
+      "fee": 0.0,
+      "slip_pips": 0.3073932418668306
+    },
+    {
+      "timestamp": "2026-01-02T11:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1722570621162092,
+      "volume": 0.01,
+      "pnl": 0.5566912032168858,
+      "fee": 0.0,
+      "slip_pips": 0.2706211620945763
+    },
+    {
+      "timestamp": "2026-01-02T11:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.172258466460371,
+      "volume": 0.01,
+      "pnl": 0.5229983254482207,
+      "fee": 0.0,
+      "slip_pips": 0.28466460371430075
+    },
+    {
+      "timestamp": "2026-01-02T11:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1722624319017787,
+      "volume": 0.01,
+      "pnl": 0.5560469709513516,
+      "fee": 0.0,
+      "slip_pips": 0.3243190177914398
+    },
+    {
+      "timestamp": "2026-01-02T11:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1722601599984388,
+      "volume": 0.01,
+      "pnl": 0.5621936291504426,
+      "fee": 0.0,
+      "slip_pips": 0.30159998439057284
+    },
+    {
+      "timestamp": "2026-01-02T11:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1722596201733342,
+      "volume": 0.01,
+      "pnl": 0.5666330770262018,
+      "fee": 0.0,
+      "slip_pips": 0.2962017333454078
+    },
+    {
+      "timestamp": "2026-01-02T12:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6076504942100804,
+      "volume": 0.01,
+      "pnl": 0.2453187459276941,
+      "fee": 0.0,
+      "slip_pips": 0.8549421008058049
+    },
+    {
+      "timestamp": "2026-01-02T12:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6076533820475434,
+      "volume": 0.01,
+      "pnl": 0.28223431630823337,
+      "fee": 0.0,
+      "slip_pips": 0.8838204754347981
+    },
+    {
+      "timestamp": "2026-01-02T12:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6076571619983857,
+      "volume": 0.01,
+      "pnl": 0.27549548107686783,
+      "fee": 0.0,
+      "slip_pips": 0.8716199838573454
+    },
+    {
+      "timestamp": "2026-01-02T12:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6076471801273133,
+      "volume": 0.01,
+      "pnl": 0.2925159852778025,
+      "fee": 0.0,
+      "slip_pips": 0.7718012731335869
+    },
+    {
+      "timestamp": "2026-01-02T12:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6075467302805488,
+      "volume": 0.01,
+      "pnl": 0.41341494810653034,
+      "fee": 0.0,
+      "slip_pips": 0.9173028054881458
+    },
+    {
+      "timestamp": "2026-01-02T12:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1716884417380495,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.9655826195030892
+    },
+    {
+      "timestamp": "2026-01-02T12:45:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1717087141318419,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.7628586815806911
+    },
+    {
+      "timestamp": "2026-01-02T12:50:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.171738152815865,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.46847184134890374
+    },
+    {
+      "timestamp": "2026-01-02T12:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1717022062622848,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.8279373771507971
+    },
+    {
+      "timestamp": "2026-01-02T13:00:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1717967222373151,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.4327776268494557
+    },
+    {
+      "timestamp": "2026-01-02T13:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.171780673179139,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5932682086097373
+    },
+    {
+      "timestamp": "2026-01-02T13:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1717724961393532,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.6750386064679287
+    },
+    {
+      "timestamp": "2026-01-02T13:15:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1717993404049152,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.40659595084785916
+    },
+    {
+      "timestamp": "2026-01-02T13:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.171717424970641,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.6757502935892639
+    },
+    {
+      "timestamp": "2026-01-02T13:25:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1717820349259165,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5796507408360875
+    },
+    {
+      "timestamp": "2026-01-02T13:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1717845565578355,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5544344216448396
+    },
+    {
+      "timestamp": "2026-01-02T13:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1716804267976229,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.0457320237697874
+    },
+    {
+      "timestamp": "2026-01-02T13:40:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1717017550315514,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.8324496844845439
+    },
+    {
+      "timestamp": "2026-01-02T13:45:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1717311828871924,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5381711280760085
+    },
+    {
+      "timestamp": "2026-01-02T13:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6088563613694438,
+      "volume": 0.01,
+      "pnl": -0.5088400597158296,
+      "fee": 0.0,
+      "slip_pips": 0.26361369443781174
+    },
+    {
+      "timestamp": "2026-01-02T13:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6088581624815808,
+      "volume": 0.01,
+      "pnl": -0.49745523713115286,
+      "fee": 0.0,
+      "slip_pips": 0.2816248158070977
+    },
+    {
+      "timestamp": "2026-01-02T13:50:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1717665029974742,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.18497002525700162
+    },
+    {
+      "timestamp": "2026-01-02T14:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1724275966037958,
+      "volume": 0.01,
+      "pnl": -0.7391548657462721,
+      "fee": 0.0,
+      "slip_pips": 0.1759660379578459
+    },
+    {
+      "timestamp": "2026-01-02T14:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1724314876880324,
+      "volume": 0.01,
+      "pnl": -0.7227735561905478,
+      "fee": 0.0,
+      "slip_pips": 0.21487688032473726
+    },
+    {
+      "timestamp": "2026-01-02T14:15:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1724086750130418,
+      "volume": 0.01,
+      "pnl": -0.6705221971767815,
+      "fee": 0.0,
+      "slip_pips": 0.23675013041795068
+    },
+    {
+      "timestamp": "2026-01-02T14:15:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1724064772744138,
+      "volume": 0.01,
+      "pnl": -0.7042710121289986,
+      "fee": 0.0,
+      "slip_pips": 0.21477274413906638
+    },
+    {
+      "timestamp": "2026-01-02T14:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1725963062564402,
+      "volume": 0.01,
+      "pnl": -0.7995840191250548,
+      "fee": 0.0,
+      "slip_pips": 0.2630625644026573
+    },
+    {
+      "timestamp": "2026-01-02T14:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.172596712719347,
+      "volume": 0.01,
+      "pnl": -0.8160395402081466,
+      "fee": 0.0,
+      "slip_pips": 0.26712719347284314
+    },
+    {
+      "timestamp": "2026-01-02T14:25:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1725701372302084,
+      "volume": 0.01,
+      "pnl": -0.7976410908552279,
+      "fee": 0.0,
+      "slip_pips": 0.201372302085169
+    },
+    {
+      "timestamp": "2026-01-02T14:25:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1725709603968217,
+      "volume": 0.01,
+      "pnl": -0.7716199919065581,
+      "fee": 0.0,
+      "slip_pips": 0.2096039682181627
+    },
+    {
+      "timestamp": "2026-01-02T14:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1724748746498133,
+      "volume": 0.01,
+      "pnl": -0.7574496791722396,
+      "fee": 0.0,
+      "slip_pips": 0.2487464981325284
+    },
+    {
+      "timestamp": "2026-01-02T14:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1724728573433472,
+      "volume": 0.01,
+      "pnl": -0.690822417430681,
+      "fee": 0.0,
+      "slip_pips": 0.22857343347109
+    },
+    {
+      "timestamp": "2026-01-02T14:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1725768374181298,
+      "volume": 0.01,
+      "pnl": -0.7922808602942588,
+      "fee": 0.0,
+      "slip_pips": 0.26837418129859303
+    },
+    {
+      "timestamp": "2026-01-05T00:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1712855624572562,
+      "volume": 0.01,
+      "pnl": 0.39486434036661855,
+      "fee": 0.0,
+      "slip_pips": 0.8056245725637377
+    },
+    {
+      "timestamp": "2026-01-05T00:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1712780319688145,
+      "volume": 0.01,
+      "pnl": 0.4237230627368582,
+      "fee": 0.0,
+      "slip_pips": 0.7303196881472559
+    },
+    {
+      "timestamp": "2026-01-05T00:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1712851586388389,
+      "volume": 0.01,
+      "pnl": 0.44602424835349375,
+      "fee": 0.0,
+      "slip_pips": 0.8015863883902179
+    },
+    {
+      "timestamp": "2026-01-05T00:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1712833800726983,
+      "volume": 0.01,
+      "pnl": 0.483122924775925,
+      "fee": 0.0,
+      "slip_pips": 0.7838007269853343
+    },
+    {
+      "timestamp": "2026-01-05T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6088396572885064,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 2.2965728850626235
+    },
+    {
+      "timestamp": "2026-01-05T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6091897386758418,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 2.7026132415841344
+    },
+    {
+      "timestamp": "2026-01-05T01:00:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.1701640038624772,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.7900386247732253
+    },
+    {
+      "timestamp": "2026-01-05T01:00:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1710284386256742,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.7656137432564754
+    },
+    {
+      "timestamp": "2026-01-05T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6089553275868642,
+      "volume": 0.01,
+      "pnl": 0.08451477259015891,
+      "fee": 0.0,
+      "slip_pips": 1.5467241313579936
+    },
+    {
+      "timestamp": "2026-01-05T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6091282348651987,
+      "volume": 0.01,
+      "pnl": 0.044937902328640825,
+      "fee": 0.0,
+      "slip_pips": 1.6823486519853945
+    },
+    {
+      "timestamp": "2026-01-05T01:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.1706032908902277,
+      "volume": 0.01,
+      "pnl": 0.4392870277505345,
+      "fee": 0.0,
+      "slip_pips": 1.3670910977206951
+    },
+    {
+      "timestamp": "2026-01-05T01:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1710125440554153,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.4745594458475488
+    },
+    {
+      "timestamp": "2026-01-05T01:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.171113792616547,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.4620738345317278
+    },
+    {
+      "timestamp": "2026-01-05T01:15:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1711160348836431,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.43965116356750233
+    },
+    {
+      "timestamp": "2026-01-05T01:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.171102099246333,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5790075366696572
+    },
+    {
+      "timestamp": "2026-01-05T01:25:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1710479771714462,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5702282855378008
+    },
+    {
+      "timestamp": "2026-01-05T01:40:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1705270725371857,
+      "volume": 0.01,
+      "pnl": 0.5013660884884974,
+      "fee": 0.0,
+      "slip_pips": 0.7707253718596786
+    },
+    {
+      "timestamp": "2026-01-05T01:40:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1704615594134542,
+      "volume": 0.01,
+      "pnl": 0.5509846419611275,
+      "fee": 0.0,
+      "slip_pips": 0.7155941345406133
+    },
+    {
+      "timestamp": "2026-01-05T01:40:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1704741287517488,
+      "volume": 0.01,
+      "pnl": 0.639663864798079,
+      "fee": 0.0,
+      "slip_pips": 0.8412875174875987
+    },
+    {
+      "timestamp": "2026-01-05T01:40:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1704734076305086,
+      "volume": 0.01,
+      "pnl": 0.6426272531345757,
+      "fee": 0.0,
+      "slip_pips": 0.8340763050843462
+    },
+    {
+      "timestamp": "2026-01-05T01:40:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1704636108670536,
+      "volume": 0.01,
+      "pnl": 0.6384883792793783,
+      "fee": 0.0,
+      "slip_pips": 0.7361086705354017
+    },
+    {
+      "timestamp": "2026-01-05T01:40:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1705294420100993,
+      "volume": 0.01,
+      "pnl": 0.5185351613468114,
+      "fee": 0.0,
+      "slip_pips": 0.7944201009956128
+    },
+    {
+      "timestamp": "2026-01-05T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6093277997489586,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.772002510415975
+    },
+    {
+      "timestamp": "2026-01-05T02:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.609066362463908,
+      "volume": 0.01,
+      "pnl": 0.19101976052903522,
+      "fee": 0.0,
+      "slip_pips": 0.913624639081038
+    },
+    {
+      "timestamp": "2026-01-05T02:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6092948733011492,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.6012669885094744
+    },
+    {
+      "timestamp": "2026-01-05T02:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6090692255302095,
+      "volume": 0.01,
+      "pnl": 0.16487006878338822,
+      "fee": 0.0,
+      "slip_pips": 0.6922553020932547
+    },
+    {
+      "timestamp": "2026-01-06T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6138702423702798,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.3524237027989382
+    },
+    {
+      "timestamp": "2026-01-06T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6137870024193492,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.47002419349032354
+    },
+    {
+      "timestamp": "2026-01-06T04:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.614029995710779,
+      "volume": 0.01,
+      "pnl": 0.11672414988553284,
+      "fee": 0.0,
+      "slip_pips": 0.3000428922095737
+    },
+    {
+      "timestamp": "2026-01-06T04:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6140275688295724,
+      "volume": 0.01,
+      "pnl": 0.1757704072825479,
+      "fee": 0.0,
+      "slip_pips": 0.32431170427532663
+    },
+    {
+      "timestamp": "2026-01-07T02:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.615307253197651,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5225319765102455
+    },
+    {
+      "timestamp": "2026-01-07T02:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6152916527069523,
+      "volume": 0.01,
+      "pnl": -0.011398534821865041,
+      "fee": 0.0,
+      "slip_pips": 1.5834729304751347
+    },
+    {
+      "timestamp": "2026-01-07T02:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.615376728940325,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.567289403250823
+    },
+    {
+      "timestamp": "2026-01-07T02:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6153976239718386,
+      "volume": 0.01,
+      "pnl": 0.015267003385624645,
+      "fee": 0.0,
+      "slip_pips": 0.573760281611389
+    },
+    {
+      "timestamp": "2026-01-07T02:40:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.615829765310759,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.9476531075887082
+    },
+    {
+      "timestamp": "2026-01-07T02:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.615335578856226,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.7557885622594366
+    },
+    {
+      "timestamp": "2026-01-07T02:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6154551225928129,
+      "volume": 0.01,
+      "pnl": 0.08734490924337066,
+      "fee": 0.0,
+      "slip_pips": 0.7987740718696277
+    },
+    {
+      "timestamp": "2026-01-07T02:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.615336006297167,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.8100629716675121
+    },
+    {
+      "timestamp": "2026-01-07T02:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6154481798641436,
+      "volume": 0.01,
+      "pnl": 0.08195987767176251,
+      "fee": 0.0,
+      "slip_pips": 0.8682013585643399
+    },
+    {
+      "timestamp": "2026-01-07T02:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6153203272973455,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.9532729734546878
+    },
+    {
+      "timestamp": "2026-01-07T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6158989513698994,
+      "volume": 0.01,
+      "pnl": 0.050550955065184165,
+      "fee": 0.0,
+      "slip_pips": 0.9104863010071779
+    },
+    {
+      "timestamp": "2026-01-07T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6154284815265523,
+      "volume": 0.01,
+      "pnl": 0.0790231391795769,
+      "fee": 0.0,
+      "slip_pips": 1.0651847344761616
+    },
+    {
+      "timestamp": "2026-01-08T02:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6181296708278534,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.20329172146533114
+    },
+    {
+      "timestamp": "2026-01-08T02:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6183333259448114,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2167405518862938
+    },
+    {
+      "timestamp": "2026-01-08T02:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6181637077160285,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2629228397132963
+    },
+    {
+      "timestamp": "2026-01-08T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.618057298821561,
+      "volume": 0.01,
+      "pnl": 0.052878774763640765,
+      "fee": 0.0,
+      "slip_pips": 0.27298821560972963
+    },
+    {
+      "timestamp": "2026-01-08T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6180105903397735,
+      "volume": 0.01,
+      "pnl": 0.11187556717252715,
+      "fee": 0.0,
+      "slip_pips": 0.25590339773643445
+    },
+    {
+      "timestamp": "2026-01-08T03:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6183825925641437,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.27407435856096135
+    },
+    {
+      "timestamp": "2026-01-08T03:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6183273553878736,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2764461212624144
+    },
+    {
+      "timestamp": "2026-01-08T03:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6183914410089728,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.18558991027204033
+    },
+    {
+      "timestamp": "2026-01-08T04:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6182371964804438,
+      "volume": 0.01,
+      "pnl": 0.0702372167754448,
+      "fee": 0.0,
+      "slip_pips": 0.22196480443892916
+    },
+    {
+      "timestamp": "2026-01-08T04:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6182381496553455,
+      "volume": 0.01,
+      "pnl": 0.10553754734497439,
+      "fee": 0.0,
+      "slip_pips": 0.23149655345445505
+    },
+    {
+      "timestamp": "2026-01-08T04:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6183725811869656,
+      "volume": 0.01,
+      "pnl": -0.033044335319690615,
+      "fee": 0.0,
+      "slip_pips": 0.2258118696572878
+    },
+    {
+      "timestamp": "2026-01-08T04:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6183731754750657,
+      "volume": 0.01,
+      "pnl": 0.013345754842148424,
+      "fee": 0.0,
+      "slip_pips": 0.23175475065751716
+    },
+    {
+      "timestamp": "2026-01-09T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6162200339545034,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.3496604549662101
+    },
+    {
+      "timestamp": "2026-01-09T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6163921007316542,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2789926834584009
+    },
+    {
+      "timestamp": "2026-01-09T01:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6161778094995805,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.22190500419571418
+    },
+    {
+      "timestamp": "2026-01-09T02:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6162889121207948,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.21087879205178128
+    },
+    {
+      "timestamp": "2026-01-09T02:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6161803949790208,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.19605020979344778
+    },
+    {
+      "timestamp": "2026-01-09T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6162317641646464,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.23235835353674517
+    },
+    {
+      "timestamp": "2026-01-09T02:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.616289309572189,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.20690427810740727
+    },
+    {
+      "timestamp": "2026-01-09T02:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6162309113792281,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.24088620771906727
+    },
+    {
+      "timestamp": "2026-01-09T02:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6162923494263368,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.1765057366299216
+    },
+    {
+      "timestamp": "2026-01-09T02:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6162338989130778,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.21101086922256695
+    },
+    {
+      "timestamp": "2026-01-09T02:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6162310829156197,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.23917084380302683
+    },
+    {
+      "timestamp": "2026-01-09T02:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.616227792270126,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.27207729873961395
+    },
+    {
+      "timestamp": "2026-01-09T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.616181355291081,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.18644708919049396
+    },
+    {
+      "timestamp": "2026-01-09T03:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6162325929875734,
+      "volume": 0.01,
+      "pnl": -0.009176286729862315,
+      "fee": 0.0,
+      "slip_pips": 0.2759298757316459
+    },
+    {
+      "timestamp": "2026-01-09T03:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6162323354491266,
+      "volume": 0.01,
+      "pnl": 0.11673287535625937,
+      "fee": 0.0,
+      "slip_pips": 0.273354491264324
+    },
+    {
+      "timestamp": "2026-01-09T03:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6159609517156057,
+      "volume": 0.01,
+      "pnl": 0.15844764435843847,
+      "fee": 0.0,
+      "slip_pips": 0.25951715605541814
+    },
+    {
+      "timestamp": "2026-01-09T03:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6159620172795441,
+      "volume": 0.01,
+      "pnl": 0.23884647624700597,
+      "fee": 0.0,
+      "slip_pips": 0.2701727954410406
+    },
+    {
+      "timestamp": "2026-01-09T03:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6157768466222253,
+      "volume": 0.01,
+      "pnl": 0.29485354570629085,
+      "fee": 0.0,
+      "slip_pips": 0.2684662222519935
+    },
+    {
+      "timestamp": "2026-01-09T03:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6157742318616424,
+      "volume": 0.01,
+      "pnl": 0.29746568085012576,
+      "fee": 0.0,
+      "slip_pips": 0.24231861642376173
+    },
+    {
+      "timestamp": "2026-01-09T03:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6159337607931301,
+      "volume": 0.01,
+      "pnl": 0.2177368566725427,
+      "fee": 0.0,
+      "slip_pips": 0.23760793130165123
+    },
+    {
+      "timestamp": "2026-01-09T03:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6159383792068833,
+      "volume": 0.01,
+      "pnl": 0.2564080878140031,
+      "fee": 0.0,
+      "slip_pips": 0.2837920688333435
+    },
+    {
+      "timestamp": "2026-01-09T03:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6157301407370133,
+      "volume": 0.01,
+      "pnl": 0.3658892347256226,
+      "fee": 0.0,
+      "slip_pips": 0.25140737013290093
+    },
+    {
+      "timestamp": "2026-01-09T03:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6157295996906447,
+      "volume": 0.01,
+      "pnl": 0.36846740007095613,
+      "fee": 0.0,
+      "slip_pips": 0.24599690644715874
+    },
+    {
+      "timestamp": "2026-01-09T03:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6157313154068336,
+      "volume": 0.01,
+      "pnl": 0.3651562929522071,
+      "fee": 0.0,
+      "slip_pips": 0.2631540683360022
+    },
+    {
+      "timestamp": "2026-01-09T03:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6157314412334878,
+      "volume": 0.01,
+      "pnl": 0.3626600396293065,
+      "fee": 0.0,
+      "slip_pips": 0.2644123348771762
+    },
+    {
+      "timestamp": "2026-01-09T04:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.616098523279315,
+      "volume": 0.01,
+      "pnl": 0.14161952523804044,
+      "fee": 0.0,
+      "slip_pips": 0.33523279314894805
+    },
+    {
+      "timestamp": "2026-01-12T01:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6180571421666443,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.27142166644274324
+    },
+    {
+      "timestamp": "2026-01-12T01:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6177365109699953,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5151096999548075
+    },
+    {
+      "timestamp": "2026-01-12T01:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.617711541471738,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2654147173812273
+    },
+    {
+      "timestamp": "2026-01-12T01:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6173593351233402,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.19335123340184826
+    },
+    {
+      "timestamp": "2026-01-12T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6173057142000915,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.3428579990858669
+    },
+    {
+      "timestamp": "2026-01-12T02:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6180924498796674,
+      "volume": 0.01,
+      "pnl": 0.025797662660063607,
+      "fee": 0.0,
+      "slip_pips": 2.6755012033250556
+    },
+    {
+      "timestamp": "2026-01-12T02:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.618074656541649,
+      "volume": 0.01,
+      "pnl": 0.2470668485896889,
+      "fee": 0.0,
+      "slip_pips": 2.8534345835066324
+    },
+    {
+      "timestamp": "2026-01-12T02:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6181253655768764,
+      "volume": 0.01,
+      "pnl": 0.30236154513849484,
+      "fee": 0.0,
+      "slip_pips": 2.3463442312341813
+    },
+    {
+      "timestamp": "2026-01-12T02:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6181079499315996,
+      "volume": 0.01,
+      "pnl": 0.5469771512299689,
+      "fee": 0.0,
+      "slip_pips": 2.5205006840032103
+    },
+    {
+      "timestamp": "2026-01-12T02:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6177334250741588,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 2.4842507415882826
+    },
+    {
+      "timestamp": "2026-01-12T02:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6176661112785742,
+      "volume": 0.01,
+      "pnl": -0.04918298134254953,
+      "fee": 0.0,
+      "slip_pips": 1.4888872142576894
+    },
+    {
+      "timestamp": "2026-01-12T04:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6194236392862158,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.536392862157424
+    },
+    {
+      "timestamp": "2026-01-12T04:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.619612384627509,
+      "volume": 0.01,
+      "pnl": 0.13790722271247816,
+      "fee": 0.0,
+      "slip_pips": 0.5761537249102108
+    },
+    {
+      "timestamp": "2026-01-12T04:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6194405795279,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2557952790003645
+    },
+    {
+      "timestamp": "2026-01-12T04:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6196352284483966,
+      "volume": 0.01,
+      "pnl": 0.14222068659141654,
+      "fee": 0.0,
+      "slip_pips": 0.44771551603323306
+    },
+    {
+      "timestamp": "2026-01-12T04:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.61944332026959,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.4332026958975274
+    },
+    {
+      "timestamp": "2026-01-12T04:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6196252513548648,
+      "volume": 0.01,
+      "pnl": 0.13292837070001373,
+      "fee": 0.0,
+      "slip_pips": 0.29748645135182034
+    },
+    {
+      "timestamp": "2026-01-12T04:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6193563858181952,
+      "volume": 0.01,
+      "pnl": -1.4983279884437715,
+      "fee": 0.0,
+      "slip_pips": 0.3138581819537291
+    },
+    {
+      "timestamp": "2026-01-14T01:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6170611181722454,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.23881827754672025
+    },
+    {
+      "timestamp": "2026-01-14T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6166747757632667,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.29775763266673716
+    },
+    {
+      "timestamp": "2026-01-14T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6168621292574612,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.27870742538762344
+    },
+    {
+      "timestamp": "2026-01-14T02:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6167852470583524,
+      "volume": 0.01,
+      "pnl": 0.08071610875444163,
+      "fee": 0.0,
+      "slip_pips": 0.1975294164763113
+    },
+    {
+      "timestamp": "2026-01-14T02:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6167544964123421,
+      "volume": 0.01,
+      "pnl": 0.07864218868296591,
+      "fee": 0.0,
+      "slip_pips": 0.2449641234207036
+    },
+    {
+      "timestamp": "2026-01-14T02:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6166826801379255,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.22680137925399935
+    },
+    {
+      "timestamp": "2026-01-14T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.616777670520585,
+      "volume": 0.01,
+      "pnl": 0.06940494407548858,
+      "fee": 0.0,
+      "slip_pips": 0.2732947941506725
+    },
+    {
+      "timestamp": "2026-01-14T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6168529049815936,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2709501840654581
+    },
+    {
+      "timestamp": "2026-01-14T02:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6169972713037928,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.3272869620729698
+    },
+    {
+      "timestamp": "2026-01-14T02:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.616954168444447,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2083155555301847
+    },
+    {
+      "timestamp": "2026-01-14T02:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6170047682686695,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.25231731330652524
+    },
+    {
+      "timestamp": "2026-01-14T02:40:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.617064431263504,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.20568736495991533
+    },
+    {
+      "timestamp": "2026-01-14T02:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6171174446685006,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.22555331499318337
+    },
+    {
+      "timestamp": "2026-01-14T02:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6170611555170253,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2384448297483617
+    },
+    {
+      "timestamp": "2026-01-14T02:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6170015366747268,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.28463325273355317
+    },
+    {
+      "timestamp": "2026-01-14T02:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6174775954925156,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.3240450748457432
+    },
+    {
+      "timestamp": "2026-01-14T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6171814284298947,
+      "volume": 0.01,
+      "pnl": 0.216395153306145,
+      "fee": 0.0,
+      "slip_pips": 1.1142842989473283
+    },
+    {
+      "timestamp": "2026-01-14T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6169050161555243,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.2498384447588995
+    },
+    {
+      "timestamp": "2026-01-14T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6173936129064035,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.1638709359671984
+    },
+    {
+      "timestamp": "2026-01-14T03:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.617115888702667,
+      "volume": 0.01,
+      "pnl": 0.20291983555675405,
+      "fee": 0.0,
+      "slip_pips": 0.4588870266715515
+    },
+    {
+      "timestamp": "2026-01-14T03:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6169785678294764,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5143217052392719
+    },
+    {
+      "timestamp": "2026-01-14T03:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6170256793555624,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5932064443774161
+    },
+    {
+      "timestamp": "2026-01-14T03:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6170428591430086,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.42140856991475817
+    },
+    {
+      "timestamp": "2026-01-14T03:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6169331241265568,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.41875873443216216
+    },
+    {
+      "timestamp": "2026-01-14T03:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.616884684226985,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.35315773014854474
+    },
+    {
+      "timestamp": "2026-01-14T03:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6169854216563107,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.4457834368947733
+    },
+    {
+      "timestamp": "2026-01-14T03:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6171378435468249,
+      "volume": 0.01,
+      "pnl": -0.05605957343017759,
+      "fee": 0.0,
+      "slip_pips": 0.22843546824842692
+    },
+    {
+      "timestamp": "2026-01-14T03:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6171358959014541,
+      "volume": 0.01,
+      "pnl": -0.20676797394530635,
+      "fee": 0.0,
+      "slip_pips": 0.2089590145407818
+    },
+    {
+      "timestamp": "2026-01-14T04:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6173533887200087,
+      "volume": 0.01,
+      "pnl": -0.2601980186286271,
+      "fee": 0.0,
+      "slip_pips": 0.28388720008587337
+    },
+    {
+      "timestamp": "2026-01-14T04:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6173546748472525,
+      "volume": 0.01,
+      "pnl": -0.2926309349466791,
+      "fee": 0.0,
+      "slip_pips": 0.2967484725236719
+    },
+    {
+      "timestamp": "2026-01-14T04:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6173097858263645,
+      "volume": 0.01,
+      "pnl": -0.2228617881218402,
+      "fee": 0.0,
+      "slip_pips": 0.19785826364533038
+    },
+    {
+      "timestamp": "2026-01-14T04:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6173124208879721,
+      "volume": 0.01,
+      "pnl": -0.18119419603989134,
+      "fee": 0.0,
+      "slip_pips": 0.2242088797229048
+    },
+    {
+      "timestamp": "2026-01-14T04:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6172486399645103,
+      "volume": 0.01,
+      "pnl": -0.09585814824182372,
+      "fee": 0.0,
+      "slip_pips": 0.23639964510333583
+    },
+    {
+      "timestamp": "2026-01-14T04:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6172504767794331,
+      "volume": 0.01,
+      "pnl": -0.1383280208146644,
+      "fee": 0.0,
+      "slip_pips": 0.2547677943326011
+    },
+    {
+      "timestamp": "2026-01-14T04:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6172768265218216,
+      "volume": 0.01,
+      "pnl": -0.20114116721328845,
+      "fee": 0.0,
+      "slip_pips": 0.21826521821676412
+    },
+    {
+      "timestamp": "2026-01-14T04:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.617281044089242,
+      "volume": 0.01,
+      "pnl": -0.2747456845611083,
+      "fee": 0.0,
+      "slip_pips": 0.26044089242183854
+    },
+    {
+      "timestamp": "2026-01-14T04:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.617153900557326,
+      "volume": 0.01,
+      "pnl": -0.12810726549695534,
+      "fee": 0.0,
+      "slip_pips": 0.18900557326192008
+    },
+    {
+      "timestamp": "2026-01-14T04:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6171544291248048,
+      "volume": 0.01,
+      "pnl": -0.09407131842001958,
+      "fee": 0.0,
+      "slip_pips": 0.1942912480489269
+    },
+    {
+      "timestamp": "2026-01-14T04:40:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6172664751755323,
+      "volume": 0.01,
+      "pnl": -0.16338557438314205,
+      "fee": 0.0,
+      "slip_pips": 0.21475175532250312
+    },
+    {
+      "timestamp": "2026-01-14T04:40:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.617266876062768,
+      "volume": 0.01,
+      "pnl": -0.24385662863222832,
+      "fee": 0.0,
+      "slip_pips": 0.21876062768020627
+    },
+    {
+      "timestamp": "2026-01-14T04:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6172898818228831,
+      "volume": 0.01,
+      "pnl": -0.29605856609340436,
+      "fee": 0.0,
+      "slip_pips": 0.24881822883130073
+    },
+    {
+      "timestamp": "2026-01-14T04:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.617289204333857,
+      "volume": 0.01,
+      "pnl": -0.2219595200682952,
+      "fee": 0.0,
+      "slip_pips": 0.24204333856938967
+    },
+    {
+      "timestamp": "2026-01-15T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6163377900139986,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.42790013998629206
+    },
+    {
+      "timestamp": "2026-01-15T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.615972154384293,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.3715438429314754
+    },
+    {
+      "timestamp": "2026-01-15T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6161997301446553,
+      "volume": 0.01,
+      "pnl": 0.16627875874024803,
+      "fee": 0.0,
+      "slip_pips": 0.2526985534443496
+    },
+    {
+      "timestamp": "2026-01-15T01:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.616572903092448,
+      "volume": 0.01,
+      "pnl": 0.17178591773547328,
+      "fee": 0.0,
+      "slip_pips": 0.22096907551663966
+    },
+    {
+      "timestamp": "2026-01-15T01:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6169418274411644,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2817255883526798
+    },
+    {
+      "timestamp": "2026-01-15T02:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6163816198795198,
+      "volume": 0.01,
+      "pnl": 0.4093169581808616,
+      "fee": 0.0,
+      "slip_pips": 0.7161987952018785
+    },
+    {
+      "timestamp": "2026-01-19T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6116793765246773,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.2437652467712899
+    },
+    {
+      "timestamp": "2026-01-19T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6129492955779121,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.3570442208775186
+    },
+    {
+      "timestamp": "2026-01-19T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6124516807880094,
+      "volume": 0.01,
+      "pnl": 0.5642859066899111,
+      "fee": 0.0,
+      "slip_pips": 0.6831921199062609
+    },
+    {
+      "timestamp": "2026-01-19T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6132833618832372,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.7663811676282084
+    },
+    {
+      "timestamp": "2026-01-19T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6131980760970805,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5192390291955603
+    },
+    {
+      "timestamp": "2026-01-19T01:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6129574695335278,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.7253046647205624
+    },
+    {
+      "timestamp": "2026-01-19T01:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6139129171113211,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.770828886788401
+    },
+    {
+      "timestamp": "2026-01-19T01:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6146344750343122,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5052496568763346
+    },
+    {
+      "timestamp": "2026-01-19T01:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6146491406172896,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.45859382710378593
+    },
+    {
+      "timestamp": "2026-01-19T01:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6146650077107831,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5999228921673048
+    },
+    {
+      "timestamp": "2026-01-19T01:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6153735841431793,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5141585682047496
+    },
+    {
+      "timestamp": "2026-01-19T01:40:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6158209121456122,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.6408785438764253
+    },
+    {
+      "timestamp": "2026-01-19T01:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6158243906487864,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5060935121365119
+    },
+    {
+      "timestamp": "2026-01-19T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6153461319175473,
+      "volume": 0.01,
+      "pnl": 0.3468992781629269,
+      "fee": 0.0,
+      "slip_pips": 1.5113191754760966
+    },
+    {
+      "timestamp": "2026-01-19T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.615308216136813,
+      "volume": 0.01,
+      "pnl": 0.37714410800011505,
+      "fee": 0.0,
+      "slip_pips": 1.2321613681325825
+    },
+    {
+      "timestamp": "2026-01-19T02:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6148987863738895,
+      "volume": 0.01,
+      "pnl": 0.3469120946997204,
+      "fee": 0.0,
+      "slip_pips": 1.6378637388936783
+    },
+    {
+      "timestamp": "2026-01-19T02:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6148908096661234,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.6580966612340833
+    },
+    {
+      "timestamp": "2026-01-19T02:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6149646315399162,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.1963153991635205
+    },
+    {
+      "timestamp": "2026-01-19T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6143208591038594,
+      "volume": 0.01,
+      "pnl": 0.22914420918055203,
+      "fee": 0.0,
+      "slip_pips": 2.2085910385929655
+    },
+    {
+      "timestamp": "2026-01-19T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6143057869784723,
+      "volume": 0.01,
+      "pnl": 0.2508721349787549,
+      "fee": 0.0,
+      "slip_pips": 2.207869784724107
+    },
+    {
+      "timestamp": "2026-01-19T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6142627211007654,
+      "volume": 0.01,
+      "pnl": 0.29393164748782186,
+      "fee": 0.0,
+      "slip_pips": 1.9772110076542122
+    },
+    {
+      "timestamp": "2026-01-19T02:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.615375195762762,
+      "volume": 0.01,
+      "pnl": 0.3539178283833509,
+      "fee": 0.0,
+      "slip_pips": 1.3980423723799422
+    },
+    {
+      "timestamp": "2026-01-19T02:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6153524653259004,
+      "volume": 0.01,
+      "pnl": 0.2833716579846934,
+      "fee": 0.0,
+      "slip_pips": 1.6253467409974292
+    },
+    {
+      "timestamp": "2026-01-19T03:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6155261310860487,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.9113108604857865
+    },
+    {
+      "timestamp": "2026-01-19T03:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6152961167776574,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.4611677765725569
+    },
+    {
+      "timestamp": "2026-01-19T03:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6153868063777168,
+      "volume": 0.01,
+      "pnl": -1.780972936495133,
+      "fee": 0.0,
+      "slip_pips": 0.26806377717002533
+    },
+    {
+      "timestamp": "2026-01-19T03:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6153850151227076,
+      "volume": 0.01,
+      "pnl": -1.5355778286988724,
+      "fee": 0.0,
+      "slip_pips": 0.25015122707679505
+    },
+    {
+      "timestamp": "2026-01-19T03:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6155980449828662,
+      "volume": 0.01,
+      "pnl": -1.7535428496797125,
+      "fee": 0.0,
+      "slip_pips": 0.2304498286612125
+    },
+    {
+      "timestamp": "2026-01-19T03:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6156026983487768,
+      "volume": 0.01,
+      "pnl": -1.9327425877140658,
+      "fee": 0.0,
+      "slip_pips": 0.2769834877690951
+    },
+    {
+      "timestamp": "2026-01-19T03:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6151751434768982,
+      "volume": 0.01,
+      "pnl": -0.9222486304485081,
+      "fee": 0.0,
+      "slip_pips": 0.45143476898110296
+    },
+    {
+      "timestamp": "2026-01-19T06:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6159478980728794,
+      "volume": 0.01,
+      "pnl": 0.30816503012532026,
+      "fee": 0.0,
+      "slip_pips": 0.9210192712060223
+    },
+    {
+      "timestamp": "2026-01-19T06:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6159424561324223,
+      "volume": 0.01,
+      "pnl": 0.4722493532009001,
+      "fee": 0.0,
+      "slip_pips": 0.9754386757758382
+    },
+    {
+      "timestamp": "2026-01-20T02:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6143646714555722,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.1967145557197029
+    },
+    {
+      "timestamp": "2026-01-20T02:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6146253889990472,
+      "volume": 0.01,
+      "pnl": 0.19049387967252795,
+      "fee": 0.0,
+      "slip_pips": 0.3961100095278177
+    },
+    {
+      "timestamp": "2026-01-21T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.622215426177932,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.7957382206812943
+    },
+    {
+      "timestamp": "2026-01-21T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6221732187080422,
+      "volume": 0.01,
+      "pnl": 0.030838986066321353,
+      "fee": 0.0,
+      "slip_pips": 0.882187080421538
+    },
+    {
+      "timestamp": "2026-01-22T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6160902339062846,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.747660937155378
+    },
+    {
+      "timestamp": "2026-01-22T02:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6158994154780268,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.8058452197302131
+    },
+    {
+      "timestamp": "2026-01-22T02:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6162074417867252,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.8255821327492117
+    },
+    {
+      "timestamp": "2026-01-22T02:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6160504596241312,
+      "volume": 0.01,
+      "pnl": 0.11469938230211453,
+      "fee": 0.0,
+      "slip_pips": 0.40459624131172933
+    },
+    {
+      "timestamp": "2026-01-22T02:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6160103954596459,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.44604540354292266
+    },
+    {
+      "timestamp": "2026-01-22T02:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6157658126760204,
+      "volume": 0.01,
+      "pnl": 0.09761719809918729,
+      "fee": 0.0,
+      "slip_pips": 0.8581267602034277
+    },
+    {
+      "timestamp": "2026-01-22T02:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6159046682964755,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.903317035245386
+    },
+    {
+      "timestamp": "2026-01-22T02:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6157202754075406,
+      "volume": 0.01,
+      "pnl": 0.21197689100513603,
+      "fee": 0.0,
+      "slip_pips": 1.1527540754034458
+    },
+    {
+      "timestamp": "2026-01-22T02:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6157988834372625,
+      "volume": 0.01,
+      "pnl": 0.07729195348154094,
+      "fee": 0.0,
+      "slip_pips": 1.1388343726240981
+    },
+    {
+      "timestamp": "2026-01-22T02:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6158988309860087,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.9616901399123295
+    },
+    {
+      "timestamp": "2026-01-22T02:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.615694859136465,
+      "volume": 0.01,
+      "pnl": 0.14903250638859208,
+      "fee": 0.0,
+      "slip_pips": 0.29859136464805536
+    },
+    {
+      "timestamp": "2026-01-22T03:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6155108171968757,
+      "volume": 0.01,
+      "pnl": 0.4233521666828854,
+      "fee": 0.0,
+      "slip_pips": 0.3581719687576603
+    },
+    {
+      "timestamp": "2026-01-23T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6206129539060419,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5204609395814987
+    },
+    {
+      "timestamp": "2026-01-23T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.620586705416694,
+      "volume": 0.01,
+      "pnl": 0.01917851980641112,
+      "fee": 0.0,
+      "slip_pips": 0.8170541669419151
+    },
+    {
+      "timestamp": "2026-01-26T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6272015340179935,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 4.915340179939243
+    },
+    {
+      "timestamp": "2026-01-26T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.628123232742182,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 4.517672578180207
+    },
+    {
+      "timestamp": "2026-01-26T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6276046747225437,
+      "volume": 0.01,
+      "pnl": 0.29455569364490625,
+      "fee": 0.0,
+      "slip_pips": 2.803252774560537
+    },
+    {
+      "timestamp": "2026-01-26T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6276691181048988,
+      "volume": 0.01,
+      "pnl": 0.3317999161818858,
+      "fee": 0.0,
+      "slip_pips": 2.691181048990809
+    },
+    {
+      "timestamp": "2026-01-26T01:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6251522394422724,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.422394422722657
+    },
+    {
+      "timestamp": "2026-01-26T01:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6251757671254519,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.1076712545170604
+    },
+    {
+      "timestamp": "2026-01-26T09:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6222517005339867,
+      "volume": 0.01,
+      "pnl": -2.1192855011439655,
+      "fee": 0.0,
+      "slip_pips": 0.4329946601328578
+    },
+    {
+      "timestamp": "2026-01-26T17:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.625936364095293,
+      "volume": 0.01,
+      "pnl": 0.5557319454649942,
+      "fee": 0.0,
+      "slip_pips": 2.1363590470689973
+    },
+    {
+      "timestamp": "2026-01-27T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6285565966517828,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.134033482173318
+    },
+    {
+      "timestamp": "2026-01-27T01:40:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6282863647223136,
+      "volume": 0.01,
+      "pnl": 0.19744558793340689,
+      "fee": 0.0,
+      "slip_pips": 0.3636472231364395
+    },
+    {
+      "timestamp": "2026-01-28T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6349549362228082,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.7493622280824244
+    },
+    {
+      "timestamp": "2026-01-28T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6349940967693752,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.9909676937534359
+    },
+    {
+      "timestamp": "2026-01-28T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6347642217737308,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.342217737309268
+    },
+    {
+      "timestamp": "2026-01-28T01:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.634884263276283,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.5426327628318501
+    },
+    {
+      "timestamp": "2026-01-29T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6202553018196195,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.44698180380508246
+    },
+    {
+      "timestamp": "2026-01-29T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.620207645266148,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.3735473385166356
+    },
+    {
+      "timestamp": "2026-01-29T01:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.621541247501765,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5875249823487868
+    },
+    {
+      "timestamp": "2026-01-29T01:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6216052281966853,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.29771803314749545
+    },
+    {
+      "timestamp": "2026-01-29T01:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6212093994612178,
+      "volume": 0.01,
+      "pnl": 0.24246554283610022,
+      "fee": 0.0,
+      "slip_pips": 0.5939946121789327
+    },
+    {
+      "timestamp": "2026-01-29T01:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6211460471780272,
+      "volume": 0.01,
+      "pnl": 0.33550167951985205,
+      "fee": 0.0,
+      "slip_pips": 0.510471780273779
+    },
+    {
+      "timestamp": "2026-01-29T01:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6216934744519118,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.5152554808808643
+    },
+    {
+      "timestamp": "2026-01-29T01:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6210203877138925,
+      "volume": 0.01,
+      "pnl": 0.4917923910008164,
+      "fee": 0.0,
+      "slip_pips": 0.5538771389256869
+    },
+    {
+      "timestamp": "2026-01-29T01:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6215704684307346,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.6453156926526399
+    },
+    {
+      "timestamp": "2026-01-29T01:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6211372415270986,
+      "volume": 0.01,
+      "pnl": 0.31653824499942146,
+      "fee": 0.0,
+      "slip_pips": 0.3724152709856525
+    },
+    {
+      "timestamp": "2026-01-29T02:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6213991494247713,
+      "volume": 0.01,
+      "pnl": -0.8357549137477625,
+      "fee": 0.0,
+      "slip_pips": 0.34149424771203696
+    },
+    {
+      "timestamp": "2026-01-29T09:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.619211456309024,
+      "volume": 0.01,
+      "pnl": 0.7278677790536188,
+      "fee": 0.0,
+      "slip_pips": 0.9645630902441371
+    },
+    {
+      "timestamp": "2026-01-30T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6143753385516129,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.44661448387076647
+    },
+    {
+      "timestamp": "2026-01-30T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6147216531841595,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2834681584023413
+    },
+    {
+      "timestamp": "2026-01-30T01:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6146633800629744,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.3161993702543572
+    },
+    {
+      "timestamp": "2026-01-30T01:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.614558874918327,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.26125081672880524
+    },
+    {
+      "timestamp": "2026-01-30T01:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6152172579978918,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.5274200210812148
+    },
+    {
+      "timestamp": "2026-01-30T01:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6156950150355018,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.5498496449807464
+    },
+    {
+      "timestamp": "2026-01-30T01:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6162022130330098,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.2778696699027912
+    },
+    {
+      "timestamp": "2026-01-30T01:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6166596140780218,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.5038592197823752
+    },
+    {
+      "timestamp": "2026-01-30T01:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.615022600464377,
+      "volume": 0.01,
+      "pnl": 0.1422269797132737,
+      "fee": 0.0,
+      "slip_pips": 0.9260046437736154
+    },
+    {
+      "timestamp": "2026-01-30T01:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.615515396189564,
+      "volume": 0.01,
+      "pnl": 0.13123892764916764,
+      "fee": 0.0,
+      "slip_pips": 1.0539618956429049
+    },
+    {
+      "timestamp": "2026-01-30T01:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6159926477760946,
+      "volume": 0.01,
+      "pnl": 0.15311934249706166,
+      "fee": 0.0,
+      "slip_pips": 1.0264777609478868
+    },
+    {
+      "timestamp": "2026-01-30T01:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6164739693686063,
+      "volume": 0.01,
+      "pnl": 0.13564173881773964,
+      "fee": 0.0,
+      "slip_pips": 1.0396936860652903
+    },
+    {
+      "timestamp": "2026-01-30T01:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6147428297666417,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.0282976664178491
+    },
+    {
+      "timestamp": "2026-01-30T01:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.615292669869867,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.02330130132778
+    },
+    {
+      "timestamp": "2026-01-30T01:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.614959135061805,
+      "volume": 0.01,
+      "pnl": 0.24369798344486124,
+      "fee": 0.0,
+      "slip_pips": 0.24135061805116986
+    },
+    {
+      "timestamp": "2026-01-30T01:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.614473458749128,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.36541250871792985
+    },
+    {
+      "timestamp": "2026-01-30T02:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.614462345902302,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.3765409769787309
+    },
+    {
+      "timestamp": "2026-01-30T02:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6144174410605192,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.6755893948075248
+    },
+    {
+      "timestamp": "2026-01-30T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6142294936033765,
+      "volume": 0.01,
+      "pnl": 0.1065619507221248,
+      "fee": 0.0,
+      "slip_pips": 2.594936033765514
+    },
+    {
+      "timestamp": "2026-01-30T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.613850298836768,
+      "volume": 0.01,
+      "pnl": 0.6366570810377421,
+      "fee": 0.0,
+      "slip_pips": 2.4029883676834363
+    },
+    {
+      "timestamp": "2026-01-30T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6139019421579779,
+      "volume": 0.01,
+      "pnl": 0.5563463766925548,
+      "fee": 0.0,
+      "slip_pips": 2.319421579778822
+    },
+    {
+      "timestamp": "2026-01-30T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.614048349238767,
+      "volume": 0.01,
+      "pnl": 0.3730167754560106,
+      "fee": 0.0,
+      "slip_pips": 2.5834923876687723
+    },
+    {
+      "timestamp": "2026-01-30T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6141727617068842,
+      "volume": 0.01,
+      "pnl": 0.2197049934561985,
+      "fee": 0.0,
+      "slip_pips": 2.277617068841084
+    },
+    {
+      "timestamp": "2026-01-30T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6141867749214194,
+      "volume": 0.01,
+      "pnl": 0.20134657826937702,
+      "fee": 0.0,
+      "slip_pips": 2.167749214195548
+    },
+    {
+      "timestamp": "2026-01-30T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.614200904867346,
+      "volume": 0.01,
+      "pnl": 0.15821267329114236,
+      "fee": 0.0,
+      "slip_pips": 2.2590486734617
+    },
+    {
+      "timestamp": "2026-01-30T02:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6127428058952455,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 3.3219410475443905
+    },
+    {
+      "timestamp": "2026-01-30T02:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6126286947794475,
+      "volume": 0.01,
+      "pnl": 0.08337555222561496,
+      "fee": 0.0,
+      "slip_pips": 2.036947794475174
+    },
+    {
+      "timestamp": "2026-01-30T03:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6127413491734932,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 4.8365082650673585
+    },
+    {
+      "timestamp": "2026-01-30T03:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6124483276247308,
+      "volume": 0.01,
+      "pnl": 0.21409687628772273,
+      "fee": 0.0,
+      "slip_pips": 1.5832762473067874
+    },
+    {
+      "timestamp": "2026-01-30T03:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.612870794059161,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 2.692059408392295
+    },
+    {
+      "timestamp": "2026-01-30T04:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6124683420802146,
+      "volume": 0.01,
+      "pnl": 0.29405247468018125,
+      "fee": 0.0,
+      "slip_pips": 1.0834208021488143
+    },
+    {
+      "timestamp": "2026-01-30T04:40:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6117490186169574,
+      "volume": 0.01,
+      "pnl": -2.187435081310157,
+      "fee": 0.0,
+      "slip_pips": 0.7098138304257152
+    },
+    {
+      "timestamp": "2026-02-02T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.614094018386481,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.7598161351901399
+    },
+    {
+      "timestamp": "2026-02-02T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6146384201656485,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.2842016564843532
+    },
+    {
+      "timestamp": "2026-02-02T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6153180011144517,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.0699888554813104
+    },
+    {
+      "timestamp": "2026-02-02T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6150242634583318,
+      "volume": 0.01,
+      "pnl": 0.2819172994237483,
+      "fee": 0.0,
+      "slip_pips": 0.757365416681361
+    },
+    {
+      "timestamp": "2026-02-02T01:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.615733136158898,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.9813615889793361
+    },
+    {
+      "timestamp": "2026-02-02T01:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6157301552213328,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.1515522133264215
+    },
+    {
+      "timestamp": "2026-02-02T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.61612585810655,
+      "volume": 0.01,
+      "pnl": 0.28694320467913603,
+      "fee": 0.0,
+      "slip_pips": 2.0414189345003018
+    },
+    {
+      "timestamp": "2026-02-02T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6161315699066412,
+      "volume": 0.01,
+      "pnl": 0.2932945736705123,
+      "fee": 0.0,
+      "slip_pips": 1.9843009335883557
+    },
+    {
+      "timestamp": "2026-02-02T02:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6157309013165768,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.6590131657673473
+    },
+    {
+      "timestamp": "2026-02-02T02:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6161921483929118,
+      "volume": 0.01,
+      "pnl": 0.3370112493679798,
+      "fee": 0.0,
+      "slip_pips": 1.4785160708829352
+    },
+    {
+      "timestamp": "2026-02-02T02:40:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6158782958928,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.9829589280005623
+    },
+    {
+      "timestamp": "2026-02-02T02:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.615849531500057,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.7453150005681153
+    },
+    {
+      "timestamp": "2026-02-02T02:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.615888267930587,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.7326793058678804
+    },
+    {
+      "timestamp": "2026-02-02T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6162490866875456,
+      "volume": 0.01,
+      "pnl": 0.2709191567875175,
+      "fee": 0.0,
+      "slip_pips": 0.7091331245456202
+    },
+    {
+      "timestamp": "2026-02-02T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6162462589062636,
+      "volume": 0.01,
+      "pnl": 0.2898698022903503,
+      "fee": 0.0,
+      "slip_pips": 0.7374109373662484
+    },
+    {
+      "timestamp": "2026-02-02T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.616245907030034,
+      "volume": 0.01,
+      "pnl": 0.26130984002137914,
+      "fee": 0.0,
+      "slip_pips": 0.7409296996622838
+    },
+    {
+      "timestamp": "2026-02-02T03:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.617333920224284,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 2.98920224283727
+    },
+    {
+      "timestamp": "2026-02-02T03:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6175795407005418,
+      "volume": 0.01,
+      "pnl": 0.17946317238847134,
+      "fee": 0.0,
+      "slip_pips": 0.35459299458226123
+    },
+    {
+      "timestamp": "2026-02-02T03:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6175198571791862,
+      "volume": 0.01,
+      "pnl": -2.5030970837512454,
+      "fee": 0.0,
+      "slip_pips": 0.49857179186297446
+    },
+    {
+      "timestamp": "2026-02-02T15:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6149021186942771,
+      "volume": 0.01,
+      "pnl": 0.3038654578081456,
+      "fee": 0.0,
+      "slip_pips": 0.9211869427701984
+    },
+    {
+      "timestamp": "2026-02-03T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6129983218246529,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.4167817534690779
+    },
+    {
+      "timestamp": "2026-02-03T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6133184785619161,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.4152143808368452
+    },
+    {
+      "timestamp": "2026-02-03T01:15:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1795603059064133,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2969409358697033
+    },
+    {
+      "timestamp": "2026-02-03T01:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6133014012286848,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2359877131506865
+    },
+    {
+      "timestamp": "2026-02-03T01:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1795625854455403,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.27414554459836615
+    },
+    {
+      "timestamp": "2026-02-03T01:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6133584535766887,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.21546423311042165
+    },
+    {
+      "timestamp": "2026-02-03T01:25:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1795668559372299,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.23144062770256896
+    },
+    {
+      "timestamp": "2026-02-03T01:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6131374376980163,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.22562301983661012
+    },
+    {
+      "timestamp": "2026-02-03T01:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1795615412842835,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.28458715716731253
+    },
+    {
+      "timestamp": "2026-02-03T01:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.179572363561005,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.17636438995297216
+    },
+    {
+      "timestamp": "2026-02-03T01:40:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6130262401009559,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.23759899044026755
+    },
+    {
+      "timestamp": "2026-02-03T01:40:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.179617210454352,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.27789545647862435
+    },
+    {
+      "timestamp": "2026-02-03T01:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.613105402566644,
+      "volume": 0.01,
+      "pnl": 0.1556844716449132,
+      "fee": 0.0,
+      "slip_pips": 0.30402566644265505
+    },
+    {
+      "timestamp": "2026-02-03T01:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6131831317639527,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.31868236047254184
+    },
+    {
+      "timestamp": "2026-02-03T01:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6131259605774948,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.3403942250514792
+    },
+    {
+      "timestamp": "2026-02-03T01:50:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.179564731919487,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.25268080513072294
+    },
+    {
+      "timestamp": "2026-02-03T01:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.613128164439508,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.3183556049194511
+    },
+    {
+      "timestamp": "2026-02-03T01:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1795069971584222,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2800284157788791
+    },
+    {
+      "timestamp": "2026-02-03T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6131828481471233,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.3215185287651459
+    },
+    {
+      "timestamp": "2026-02-03T02:00:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1795023295748939,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.32670425106181256
+    },
+    {
+      "timestamp": "2026-02-03T02:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6131101926655045,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.498073344955128
+    },
+    {
+      "timestamp": "2026-02-03T02:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1794919439729807,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.43056027019252535
+    },
+    {
+      "timestamp": "2026-02-03T02:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1802136988592402,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.4130114075978404
+    },
+    {
+      "timestamp": "2026-02-03T02:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1806355681211038,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2443187889617744
+    },
+    {
+      "timestamp": "2026-02-03T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6127934500252838,
+      "volume": 0.01,
+      "pnl": 0.14969005682210867,
+      "fee": 0.0,
+      "slip_pips": 0.38450025284021294
+    },
+    {
+      "timestamp": "2026-02-03T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6127758178239464,
+      "volume": 0.01,
+      "pnl": 0.18297161927858555,
+      "fee": 0.0,
+      "slip_pips": 0.40817823946418097
+    },
+    {
+      "timestamp": "2026-02-03T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6129647232750355,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.4472327503567788
+    },
+    {
+      "timestamp": "2026-02-03T03:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6129511741609408,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.3117416094081663
+    },
+    {
+      "timestamp": "2026-02-03T03:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6135671636802549,
+      "volume": 0.01,
+      "pnl": 0.44017448358910705,
+      "fee": 0.0,
+      "slip_pips": 0.32836319745067627
+    },
+    {
+      "timestamp": "2026-02-03T03:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.613567832235148,
+      "volume": 0.01,
+      "pnl": 0.4505626565110615,
+      "fee": 0.0,
+      "slip_pips": 0.32167764851718117
+    },
+    {
+      "timestamp": "2026-02-03T03:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.613355559184578,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.35559184578090935
+    },
+    {
+      "timestamp": "2026-02-03T03:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.6135683605900792,
+      "volume": 0.01,
+      "pnl": 0.15548384198998488,
+      "fee": 0.0,
+      "slip_pips": 0.26639409920649093
+    },
+    {
+      "timestamp": "2026-02-03T03:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6137414022910206,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.3359770897943067
+    },
+    {
+      "timestamp": "2026-02-03T03:40:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.613748498670945,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2650132905496611
+    },
+    {
+      "timestamp": "2026-02-03T03:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6138032748479765,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2672515202367158
+    },
+    {
+      "timestamp": "2026-02-03T04:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.613739369933012,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.3563006698799965
+    },
+    {
+      "timestamp": "2026-02-03T04:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6138564836755045,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2851632449548206
+    },
+    {
+      "timestamp": "2026-02-03T04:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6138048052204037,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.25194779596362504
+    },
+    {
+      "timestamp": "2026-02-03T04:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.180222637392806,
+      "volume": 0.01,
+      "pnl": -0.6623314863927199,
+      "fee": 0.0,
+      "slip_pips": 0.226373928059676
+    },
+    {
+      "timestamp": "2026-02-03T04:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1802238772393103,
+      "volume": 0.01,
+      "pnl": -0.661291793770058,
+      "fee": 0.0,
+      "slip_pips": 0.2387723931044515
+    },
+    {
+      "timestamp": "2026-02-03T05:00:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.180211875681721,
+      "volume": 0.01,
+      "pnl": -0.6450197444911597,
+      "fee": 0.0,
+      "slip_pips": 0.168756817210902
+    },
+    {
+      "timestamp": "2026-02-03T05:00:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.180213748688473,
+      "volume": 0.01,
+      "pnl": -0.6522074041894754,
+      "fee": 0.0,
+      "slip_pips": 0.18748688473119834
+    },
+    {
+      "timestamp": "2026-02-03T05:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1803903641411457,
+      "volume": 0.01,
+      "pnl": -0.8180005801408098,
+      "fee": 0.0,
+      "slip_pips": 0.20364141145921744
+    },
+    {
+      "timestamp": "2026-02-03T05:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.180392072205055,
+      "volume": 0.01,
+      "pnl": -0.7748617507028488,
+      "fee": 0.0,
+      "slip_pips": 0.22072205054987495
+    },
+    {
+      "timestamp": "2026-02-03T05:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1802476488269038,
+      "volume": 0.01,
+      "pnl": -0.6829169074167308,
+      "fee": 0.0,
+      "slip_pips": 0.22648826903695296
+    },
+    {
+      "timestamp": "2026-02-03T05:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1802454721761837,
+      "volume": 0.01,
+      "pnl": -0.7384750177614751,
+      "fee": 0.0,
+      "slip_pips": 0.20472176183705273
+    },
+    {
+      "timestamp": "2026-02-03T05:15:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1802964169926589,
+      "volume": 0.01,
+      "pnl": -0.08271813341864664,
+      "fee": 0.0,
+      "slip_pips": 0.2641699265900096
+    },
+    {
+      "timestamp": "2026-02-03T05:15:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1802952808715756,
+      "volume": 0.01,
+      "pnl": 0.3402872495281706,
+      "fee": 0.0,
+      "slip_pips": 0.25280871575675923
+    },
+    {
+      "timestamp": "2026-02-03T05:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6135428371596159,
+      "volume": 0.01,
+      "pnl": 0.14508207520217467,
+      "fee": 0.0,
+      "slip_pips": 0.9283715961577518
+    },
+    {
+      "timestamp": "2026-02-03T05:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.613551851268993,
+      "volume": 0.01,
+      "pnl": 0.14368088171609075,
+      "fee": 0.0,
+      "slip_pips": 1.018512689930668
+    },
+    {
+      "timestamp": "2026-02-03T05:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6134776212928967,
+      "volume": 0.01,
+      "pnl": 0.2379395276184689,
+      "fee": 0.0,
+      "slip_pips": 0.8762129289676646
+    },
+    {
+      "timestamp": "2026-02-03T05:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.613553927347926,
+      "volume": 0.01,
+      "pnl": 0.13549405620617205,
+      "fee": 0.0,
+      "slip_pips": 1.0392734792602554
+    },
+    {
+      "timestamp": "2026-02-03T05:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.613434344760375,
+      "volume": 0.01,
+      "pnl": 0.3084367804021102,
+      "fee": 0.0,
+      "slip_pips": 1.0434476037505322
+    },
+    {
+      "timestamp": "2026-02-03T05:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6134798315971122,
+      "volume": 0.01,
+      "pnl": 0.23744273387562523,
+      "fee": 0.0,
+      "slip_pips": 0.8983159711232435
+    },
+    {
+      "timestamp": "2026-02-03T05:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6132537851607924,
+      "volume": 0.01,
+      "pnl": 0.03479079077945003,
+      "fee": 0.0,
+      "slip_pips": 0.23785160792451848
+    },
+    {
+      "timestamp": "2026-02-03T05:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.613252445390914,
+      "volume": 0.01,
+      "pnl": 0.07745512755338453,
+      "fee": 0.0,
+      "slip_pips": 0.22445390914181718
+    },
+    {
+      "timestamp": "2026-02-03T05:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6132709452538065,
+      "volume": 0.01,
+      "pnl": -0.09754760622970565,
+      "fee": 0.0,
+      "slip_pips": 0.3594525380651581
+    },
+    {
+      "timestamp": "2026-02-03T05:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6132677551936907,
+      "volume": 0.01,
+      "pnl": -0.061830305805784455,
+      "fee": 0.0,
+      "slip_pips": 0.3275519369070723
+    },
+    {
+      "timestamp": "2026-02-03T05:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6128879080243794,
+      "volume": 0.01,
+      "pnl": 0.1739336517384962,
+      "fee": 0.0,
+      "slip_pips": 0.32908024379259576
+    },
+    {
+      "timestamp": "2026-02-03T05:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6128895247360224,
+      "volume": 0.01,
+      "pnl": 0.1743626545223558,
+      "fee": 0.0,
+      "slip_pips": 0.34524736022228736
+    },
+    {
+      "timestamp": "2026-02-03T06:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.613167119615734,
+      "volume": 0.01,
+      "pnl": 0.011492088050410678,
+      "fee": 0.0,
+      "slip_pips": 0.5211961573402324
+    },
+    {
+      "timestamp": "2026-02-03T06:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6131629069646238,
+      "volume": 0.01,
+      "pnl": -0.038515825285940546,
+      "fee": 0.0,
+      "slip_pips": 0.4790696462379783
+    },
+    {
+      "timestamp": "2026-02-03T11:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1801708120411145,
+      "volume": 0.01,
+      "pnl": -0.6684824662206436,
+      "fee": 0.0,
+      "slip_pips": 0.40812041114641406
+    },
+    {
+      "timestamp": "2026-02-03T12:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.1789601832936196,
+      "volume": 0.01,
+      "pnl": 0.5317606793611152,
+      "fee": 0.0,
+      "slip_pips": 0.851832936196773
+    },
+    {
+      "timestamp": "2026-02-04T01:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.6118142796530681,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.3927965306789394
+    },
+    {
+      "timestamp": "2026-02-04T01:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "BUY",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6116250227384077,
+      "volume": 0.01,
+      "pnl": -0.13828100498336268,
+      "fee": 0.0,
+      "slip_pips": 0.1997726159234855
+    },
+    {
+      "timestamp": "2026-02-05T02:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6126860991286145,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.0890087138576352
+    },
+    {
+      "timestamp": "2026-02-05T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.612582891483799,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 1.0210851620127075
+    },
+    {
+      "timestamp": "2026-02-05T03:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6126540893504886,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.859106495114258
+    },
+    {
+      "timestamp": "2026-02-05T03:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6129053660975416,
+      "volume": 0.01,
+      "pnl": -0.16020792094864716,
+      "fee": 0.0,
+      "slip_pips": 0.2536609754184242
+    },
+    {
+      "timestamp": "2026-02-05T03:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6129042131826359,
+      "volume": 0.01,
+      "pnl": -0.2347744467770329,
+      "fee": 0.0,
+      "slip_pips": 0.2421318263591598
+    },
+    {
+      "timestamp": "2026-02-05T03:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6131416636590887,
+      "volume": 0.01,
+      "pnl": -0.35624730287010176,
+      "fee": 0.0,
+      "slip_pips": 0.4166365908885333
+    },
+    {
+      "timestamp": "2026-02-09T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.61436155716239,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.9844283761011992
+    },
+    {
+      "timestamp": "2026-02-09T04:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6149530087345005,
+      "volume": 0.01,
+      "pnl": -0.4321454671137785,
+      "fee": 0.0,
+      "slip_pips": 0.33008734500596704
+    },
+    {
+      "timestamp": "2026-02-10T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6151931534406763,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.9184655932361269
+    },
+    {
+      "timestamp": "2026-02-10T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6150718842625935,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.48115737406560183
+    },
+    {
+      "timestamp": "2026-02-10T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6152941290432885,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.45870956711384253
+    },
+    {
+      "timestamp": "2026-02-10T01:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.1911721064990641,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.22106499064135535
+    },
+    {
+      "timestamp": "2026-02-10T01:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6151559720250082,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.7402797499169391
+    },
+    {
+      "timestamp": "2026-02-10T01:15:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.191289044610639,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2404461063890375
+    },
+    {
+      "timestamp": "2026-02-10T01:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6146743474351113,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.6065256488876294
+    },
+    {
+      "timestamp": "2026-02-10T01:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "BUY",
+      "event_type": "ENTRY",
+      "price": 1.1911746429368675,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.24642936867459214
+    },
+    {
+      "timestamp": "2026-02-10T01:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6147424771694336,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.47522830566317253
+    },
+    {
+      "timestamp": "2026-02-10T01:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.614303133065946,
+      "volume": 0.01,
+      "pnl": 0.271228642422556,
+      "fee": 0.0,
+      "slip_pips": 1.0313306594599139
+    },
+    {
+      "timestamp": "2026-02-10T01:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6142483961343126,
+      "volume": 0.01,
+      "pnl": 0.3610014577398383,
+      "fee": 0.0,
+      "slip_pips": 1.0839613431262123
+    },
+    {
+      "timestamp": "2026-02-10T03:45:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6146324086982926,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.4759130170747304
+    },
+    {
+      "timestamp": "2026-02-10T03:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6143224603528403,
+      "volume": 0.01,
+      "pnl": 0.2264644796676133,
+      "fee": 0.0,
+      "slip_pips": 0.7246035284036304
+    },
+    {
+      "timestamp": "2026-02-10T04:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6137999239300533,
+      "volume": 0.01,
+      "pnl": 0.9293607760551925,
+      "fee": 0.0,
+      "slip_pips": 0.2992393005339533
+    },
+    {
+      "timestamp": "2026-02-10T04:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.614365591724421,
+      "volume": 0.01,
+      "pnl": 0.6046598932189609,
+      "fee": 0.0,
+      "slip_pips": 0.3059172442102035
+    },
+    {
+      "timestamp": "2026-02-10T04:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6143614174875298,
+      "volume": 0.01,
+      "pnl": 0.6814878680724601,
+      "fee": 0.0,
+      "slip_pips": 0.26417487529645184
+    },
+    {
+      "timestamp": "2026-02-10T05:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6145819550954301,
+      "volume": 0.01,
+      "pnl": 0.4194068049874593,
+      "fee": 0.0,
+      "slip_pips": 0.3195509543008534
+    },
+    {
+      "timestamp": "2026-02-10T07:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "BUY",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.1906832869442974,
+      "volume": 0.01,
+      "pnl": -0.48881955476676175,
+      "fee": 0.0,
+      "slip_pips": 0.21713055702523026
+    },
+    {
+      "timestamp": "2026-02-10T16:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.1919941863423211,
+      "volume": 0.01,
+      "pnl": 0.7051417316821241,
+      "fee": 0.0,
+      "slip_pips": 0.45813657678815184
+    },
+    {
+      "timestamp": "2026-02-10T16:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "BUY",
+      "event_type": "TP_EXIT",
+      "price": 1.1919963540932088,
+      "volume": 0.01,
+      "pnl": 0.8217111563413315,
+      "fee": 0.0,
+      "slip_pips": 0.4364590679120719
+    },
+    {
+      "timestamp": "2026-02-12T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6121096388518577,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.35361148142187177
+    },
+    {
+      "timestamp": "2026-02-12T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6120556661306515,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.34333869348389695
+    },
+    {
+      "timestamp": "2026-02-12T02:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6121157764937344,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.29223506265553795
+    },
+    {
+      "timestamp": "2026-02-12T04:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6119419992571724,
+      "volume": 0.01,
+      "pnl": 0.12248625985302396,
+      "fee": 0.0,
+      "slip_pips": 0.2699925717235903
+    },
+    {
+      "timestamp": "2026-02-12T04:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6119429262091858,
+      "volume": 0.01,
+      "pnl": 0.08237368589677738,
+      "fee": 0.0,
+      "slip_pips": 0.2792620918574319
+    },
+    {
+      "timestamp": "2026-02-12T04:20:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6114952731484733,
+      "volume": 0.01,
+      "pnl": 0.4533722127521423,
+      "fee": 0.0,
+      "slip_pips": 0.4527314847311534
+    },
+    {
+      "timestamp": "2026-02-13T01:50:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6154893373327976,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.30662667202489374
+    },
+    {
+      "timestamp": "2026-02-13T01:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.6153415538017626,
+      "volume": 0.01,
+      "pnl": 0.10797838075393217,
+      "fee": 0.0,
+      "slip_pips": 0.365538017626999
+    },
+    {
+      "timestamp": "2026-02-13T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6155955213567352,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.24478643265033556
+    },
+    {
+      "timestamp": "2026-02-13T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6155352907804685,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2970921953163239
+    },
+    {
+      "timestamp": "2026-02-13T02:25:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.6155977327602473,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.22267239752853524
+    },
+    {
+      "timestamp": "2026-02-13T02:30:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.615591517775554,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2848222444619859
+    },
+    {
+      "timestamp": "2026-02-13T02:35:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.615653904893587,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.2109510641315256
+    },
+    {
+      "timestamp": "2026-02-13T02:40:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.615540075542738,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.24924457262141236
+    },
+    {
+      "timestamp": "2026-02-13T02:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6161358007919393,
+      "volume": 0.01,
+      "pnl": -0.39475642623631624,
+      "fee": 0.0,
+      "slip_pips": 0.35800791939162646
+    },
+    {
+      "timestamp": "2026-02-13T02:55:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.616136250614138,
+      "volume": 0.01,
+      "pnl": -0.4390927005416821,
+      "fee": 0.0,
+      "slip_pips": 0.36250614137921044
+    },
+    {
+      "timestamp": "2026-02-13T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.615697457280912,
+      "volume": 0.01,
+      "pnl": -0.07286395302244986,
+      "fee": 0.0,
+      "slip_pips": 0.3745728091212444
+    },
+    {
+      "timestamp": "2026-02-13T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6156974473670072,
+      "volume": 0.01,
+      "pnl": -0.07739770242954234,
+      "fee": 0.0,
+      "slip_pips": 0.37447367007265797
+    },
+    {
+      "timestamp": "2026-02-13T03:00:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "ENTRY",
+      "price": 1.1872778498737004,
+      "volume": 0.01,
+      "pnl": 0.0,
+      "fee": 0.0,
+      "slip_pips": 0.3715012629938894
+    },
+    {
+      "timestamp": "2026-02-13T03:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.615643706801842,
+      "volume": 0.01,
+      "pnl": 0.007451259458185321,
+      "fee": 0.0,
+      "slip_pips": 0.28706801842108226
+    },
+    {
+      "timestamp": "2026-02-13T03:05:00+00:00",
+      "symbol": "EURCAD",
+      "side": "SELL",
+      "event_type": "GARBAGE_COLLECT",
+      "price": 1.6156458949229988,
+      "volume": 0.01,
+      "pnl": -0.0773171763654243,
+      "fee": 0.0,
+      "slip_pips": 0.3089492299883793
+    },
+    {
+      "timestamp": "2026-02-13T03:25:00+00:00",
+      "symbol": "EURUSD.sml",
+      "side": "SELL",
+      "event_type": "TP_EXIT",
+      "price": 1.186579187813287,
+      "volume": 0.01,
+      "pnl": 0.6986620604134686,
+      "fee": 0.0,
+      "slip_pips": 0.39187813287110695
+    }
+  ],
+  "phase_changes": [
+    {
+      "time": "2026-01-02T07:50:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-02T07:50:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-02T08:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-02T08:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-02T11:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-02T11:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-02T11:15:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-02T11:15:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-02T11:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-02T11:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-02T11:25:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-02T11:35:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-02T12:00:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-02T12:15:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-02T13:35:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-02T13:50:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-02T13:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-02T14:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-05T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-05T00:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-05T00:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-05T00:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-05T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-05T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-05T01:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-05T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-05T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-05T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-05T02:30:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-05T02:35:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-05T03:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-05T03:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-05T03:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-05T03:25:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-06T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-06T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-06T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-06T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-06T01:25:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-06T01:40:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-07T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-07T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-07T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-07T01:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-07T04:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-07T04:35:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-08T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-08T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-08T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-08T03:25:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-08T03:50:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-08T04:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-09T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-09T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-09T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-09T03:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-09T03:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-09T03:15:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-12T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-12T00:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-12T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-12T01:00:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-12T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-12T01:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-12T01:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-12T02:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-12T02:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-12T02:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-12T04:40:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-12T04:55:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-13T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-13T00:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-13T00:15:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-13T00:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-13T00:45:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-13T00:50:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-13T00:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-13T01:15:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-13T01:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-13T01:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-13T01:25:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-13T01:35:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-13T01:45:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-13T02:00:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-13T02:25:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-13T02:40:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-14T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-14T00:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-14T00:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-14T00:15:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-14T00:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-14T00:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-14T00:45:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-14T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-14T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-14T03:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-14T03:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-14T03:15:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-14T03:40:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-14T03:55:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-15T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-15T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-15T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-15T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-15T02:25:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-15T02:35:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-15T02:40:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-15T02:45:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-15T02:50:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-15T03:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-16T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-16T00:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-16T00:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-16T00:40:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-16T00:45:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-16T00:50:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-16T00:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-16T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-16T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-16T01:15:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-16T01:30:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-16T01:40:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-16T01:40:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-16T01:55:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-16T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-16T02:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-16T02:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-16T02:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-16T03:40:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-16T03:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-19T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-19T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-19T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-19T01:50:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-19T03:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-19T03:15:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-19T03:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-19T03:25:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-19T03:30:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-19T03:35:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-19T03:40:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-19T03:45:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-20T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-20T00:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-20T00:25:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-20T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-20T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-20T02:55:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-20T03:30:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-20T03:45:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-21T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-21T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-21T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-21T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-21T01:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-21T01:25:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-21T01:35:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-21T01:40:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-21T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-21T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-22T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-22T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-22T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-22T01:15:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-22T02:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-22T02:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-22T02:40:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-22T03:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-23T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-23T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-23T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-23T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-23T01:35:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-23T01:50:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-26T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-26T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-26T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-26T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-26T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-26T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-27T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-27T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-27T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-27T01:25:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-27T01:30:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-27T01:45:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-28T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-28T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-28T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-28T01:15:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-28T01:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-28T01:25:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-29T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-29T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-29T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-29T01:45:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-29T01:55:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-29T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-29T02:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-29T02:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-01-30T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-01-30T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-01-30T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-01-30T02:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-30T03:15:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-30T03:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-30T03:40:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-30T03:55:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-30T04:15:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-30T04:30:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-01-30T04:35:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-01-30T04:40:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-02T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-02T00:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-02T00:15:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-02T00:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-02T00:25:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-02T00:45:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-02T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-02T01:00:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-02T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-02T01:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-02T01:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-02T01:40:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-02T02:55:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-02T03:15:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-02T03:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-02T03:25:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-03T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-03T00:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-03T00:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-03T00:15:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-03T00:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-03T00:25:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-03T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-03T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-03T02:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-03T04:15:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-03T04:40:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-03T04:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-03T05:30:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-03T05:45:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-04T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-04T00:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-04T00:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-04T00:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-04T00:40:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-04T00:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-04T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-04T01:00:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-04T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-04T01:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-04T01:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-04T01:15:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-04T01:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-04T01:35:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-04T01:40:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-04T01:45:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-05T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-05T00:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-05T00:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-05T00:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-05T00:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RANGE",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-05T01:00:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-05T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-05T01:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-05T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-05T01:25:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-05T01:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-05T01:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-05T01:50:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-05T01:55:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-05T02:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-05T02:50:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-05T02:50:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-05T02:55:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-05T03:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-05T03:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-05T03:25:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-06T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-06T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-06T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-06T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-06T02:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-06T02:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-06T02:15:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-06T02:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-09T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-09T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-09T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-09T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-09T03:50:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-09T04:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-10T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-10T00:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-10T00:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-10T00:15:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-10T00:25:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-10T00:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-10T00:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-10T00:40:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-10T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-10T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-10T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-10T02:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-10T03:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-10T03:50:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-10T04:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-10T04:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-10T04:25:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-10T04:30:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-11T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-11T00:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-11T00:25:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-11T00:30:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-11T00:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-11T00:45:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-11T00:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-11T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-11T01:00:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-11T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-11T01:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-11T01:10:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-11T02:20:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-11T02:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-11T02:35:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-11T02:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-12T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-12T00:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-12T00:10:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-12T00:15:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-12T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-12T01:00:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-12T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-12T01:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-12T01:35:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-12T02:30:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-12T03:25:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-12T03:40:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-12T03:50:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-12T04:15:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-13T00:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-13T00:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "GARBAGE_COLLECT",
+      "to": "RISK_OFF"
+    },
+    {
+      "time": "2026-02-13T00:20:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-13T00:25:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-13T01:00:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RISK_OFF",
+      "to": "INIT"
+    },
+    {
+      "time": "2026-02-13T01:05:00+00:00",
+      "symbol": "EURCAD",
+      "from": "INIT",
+      "to": "RANGE"
+    },
+    {
+      "time": "2026-02-13T02:45:00+00:00",
+      "symbol": "EURCAD",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-13T02:50:00+00:00",
+      "symbol": "EURCAD",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-13T02:55:00+00:00",
+      "symbol": "EURCAD",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    },
+    {
+      "time": "2026-02-13T05:55:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "RANGE",
+      "to": "TREND_LOCK"
+    },
+    {
+      "time": "2026-02-13T09:50:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "TREND_LOCK",
+      "to": "EXHAUSTION_CONFIRM"
+    },
+    {
+      "time": "2026-02-13T10:05:00+00:00",
+      "symbol": "EURUSD.sml",
+      "from": "EXHAUSTION_CONFIRM",
+      "to": "GARBAGE_COLLECT"
+    }
+  ],
+  "event_count_by_symbol": {
+    "EURCAD": 378,
+    "EURUSD.sml": 108
+  },
+  "net_pnl_by_symbol": {
+    "EURCAD": 10.677842405839208,
+    "EURUSD.sml": 2.2522187250983983
+  },
+  "open_positions": {
+    "EURCAD": [
+      {
+        "symbol": "EURCAD",
+        "side": "BUY",
+        "entry_price": 1.6119150000000002,
+        "tp": 1.6119150000000002,
+        "volume": 0.01,
+        "opened_at": "2026-01-02T07:50:00+00:00",
+        "is_anchor": true,
+        "entry_phase": "INIT",
+        "paired_reserve": 0.0
+      },
+      {
+        "symbol": "EURCAD",
+        "side": "SELL",
+        "entry_price": 1.6119150000000002,
+        "tp": 1.6119150000000002,
+        "volume": 0.01,
+        "opened_at": "2026-01-02T07:50:00+00:00",
+        "is_anchor": true,
+        "entry_phase": "INIT",
+        "paired_reserve": 0.0
+      },
+      {
+        "symbol": "EURCAD",
+        "side": "BUY",
+        "entry_price": 1.6349549362228082,
+        "tp": 1.6354199999999999,
+        "volume": 0.01,
+        "opened_at": "2026-01-28T01:00:00+00:00",
+        "is_anchor": false,
+        "entry_phase": "INIT",
+        "paired_reserve": 0.0
+      },
+      {
+        "symbol": "EURCAD",
+        "side": "BUY",
+        "entry_price": 1.6349940967693752,
+        "tp": 1.6354199999999999,
+        "volume": 0.01,
+        "opened_at": "2026-01-28T01:05:00+00:00",
+        "is_anchor": false,
+        "entry_phase": "RANGE",
+        "paired_reserve": 0.0
+      },
+      {
+        "symbol": "EURCAD",
+        "side": "BUY",
+        "entry_price": 1.6347642217737308,
+        "tp": 1.6354199999999999,
+        "volume": 0.01,
+        "opened_at": "2026-01-28T01:10:00+00:00",
+        "is_anchor": false,
+        "entry_phase": "RANGE",
+        "paired_reserve": 0.0
+      },
+      {
+        "symbol": "EURCAD",
+        "side": "BUY",
+        "entry_price": 1.634884263276283,
+        "tp": 1.6354199999999999,
+        "volume": 0.01,
+        "opened_at": "2026-01-28T01:15:00+00:00",
+        "is_anchor": false,
+        "entry_phase": "TREND_LOCK",
+        "paired_reserve": 0.0
+      }
+    ],
+    "EURUSD.sml": [
+      {
+        "symbol": "EURUSD.sml",
+        "side": "BUY",
+        "entry_price": 1.17533,
+        "tp": 1.17533,
+        "volume": 0.01,
+        "opened_at": "2026-01-02T07:50:00+00:00",
+        "is_anchor": true,
+        "entry_phase": "INIT",
+        "paired_reserve": 0.0
+      },
+      {
+        "symbol": "EURUSD.sml",
+        "side": "SELL",
+        "entry_price": 1.17533,
+        "tp": 1.17533,
+        "volume": 0.01,
+        "opened_at": "2026-01-02T07:50:00+00:00",
+        "is_anchor": true,
+        "entry_phase": "INIT",
+        "paired_reserve": 0.0
+      }
+    ]
+  },
+  "capital_buckets": {
+    "EURCAD": {
+      "oscillation_bank": 6.3588559715245525,
+      "trend_buffer": 4.318986434314649,
+      "paired_reserved": 5.551115123125783e-17,
+      "paired_available": 4.318986434314649
+    },
+    "EURUSD.sml": {
+      "oscillation_bank": 0.6986620604134686,
+      "trend_buffer": 1.5535566646849297,
+      "paired_reserved": 0.0,
+      "paired_available": 1.5535566646849297
+    }
+  }
+}

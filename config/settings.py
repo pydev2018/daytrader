@@ -29,6 +29,8 @@ BAR_COUNT: int = int(os.getenv("BAR_COUNT", "500"))
 LOOP_SECONDS: float = float(os.getenv("LOOP_SECONDS", "2.0"))
 
 LOT_SIZE: float = float(os.getenv("LOT_SIZE", "0.01"))
+START_WITH_ANCHOR: bool = os.getenv("START_WITH_ANCHOR", "true").lower() in ("true", "1", "yes")
+ANCHOR_LOT_MULT: float = float(os.getenv("ANCHOR_LOT_MULT", "1.0"))
 MAX_RUNGS_PER_SIDE: int = int(os.getenv("MAX_RUNGS_PER_SIDE", "6"))
 OFFSET_RATIO: float = float(os.getenv("OFFSET_RATIO", "0.5"))
 STEP_ATR_MULT: float = float(os.getenv("STEP_ATR_MULT", "0.9"))
@@ -43,12 +45,16 @@ TREND_SLOW_EMA: int = int(os.getenv("TREND_SLOW_EMA", "89"))
 TREND_ON_ADX: float = float(os.getenv("TREND_ON_ADX", "25.0"))
 TREND_OFF_ADX: float = float(os.getenv("TREND_OFF_ADX", "20.0"))
 EXHAUSTION_CONFIRM_BARS: int = int(os.getenv("EXHAUSTION_CONFIRM_BARS", "4"))
+SLOW_TREND_BARS: int = int(os.getenv("SLOW_TREND_BARS", "5"))
+SLOW_TREND_MIN_MOVE_STEPS: float = float(os.getenv("SLOW_TREND_MIN_MOVE_STEPS", "1.0"))
 
 MAX_SPREAD_PIPS: float = float(os.getenv("MAX_SPREAD_PIPS", "3.0"))
 MAX_MARGIN_USAGE_PCT: float = float(os.getenv("MAX_MARGIN_USAGE_PCT", "70.0"))
 MAX_DRAWDOWN_PCT: float = float(os.getenv("MAX_DRAWDOWN_PCT", "18.0"))
 MAX_NET_DELTA_LOTS: float = float(os.getenv("MAX_NET_DELTA_LOTS", "0.50"))
 CLEANUP_CLOSE_COUNT: int = int(os.getenv("CLEANUP_CLOSE_COUNT", "2"))
+RISK_OFF_UNWIND_PER_CYCLE: int = int(os.getenv("RISK_OFF_UNWIND_PER_CYCLE", "2"))
+PROTECT_OSCILLATION_BANK: bool = os.getenv("PROTECT_OSCILLATION_BANK", "true").lower() in ("true", "1", "yes")
 
 STATE_PATH = STATE_DIR / "phased_grid_state.json"
 
@@ -59,6 +65,8 @@ def _validate() -> None:
         errors.append("SYMBOLS must not be empty")
     if LOT_SIZE <= 0:
         errors.append(f"LOT_SIZE must be > 0 (got {LOT_SIZE})")
+    if ANCHOR_LOT_MULT <= 0:
+        errors.append(f"ANCHOR_LOT_MULT must be > 0 (got {ANCHOR_LOT_MULT})")
     if MAX_RUNGS_PER_SIDE < 1:
         errors.append(f"MAX_RUNGS_PER_SIDE must be >= 1 (got {MAX_RUNGS_PER_SIDE})")
     if not (0.1 <= OFFSET_RATIO <= 1.0):
@@ -71,6 +79,10 @@ def _validate() -> None:
         errors.append("TREND_ON_ADX must be greater than TREND_OFF_ADX")
     if EXHAUSTION_CONFIRM_BARS < 1:
         errors.append("EXHAUSTION_CONFIRM_BARS must be >= 1")
+    if SLOW_TREND_BARS < 1:
+        errors.append("SLOW_TREND_BARS must be >= 1")
+    if SLOW_TREND_MIN_MOVE_STEPS <= 0:
+        errors.append("SLOW_TREND_MIN_MOVE_STEPS must be > 0")
     if LOOP_SECONDS < 0.2:
         errors.append("LOOP_SECONDS must be >= 0.2")
     if MAX_MARGIN_USAGE_PCT <= 0 or MAX_MARGIN_USAGE_PCT > 100:
@@ -79,6 +91,8 @@ def _validate() -> None:
         errors.append("MAX_DRAWDOWN_PCT must be in (0, 100]")
     if CLEANUP_CLOSE_COUNT < 1:
         errors.append("CLEANUP_CLOSE_COUNT must be >= 1")
+    if RISK_OFF_UNWIND_PER_CYCLE < 1:
+        errors.append("RISK_OFF_UNWIND_PER_CYCLE must be >= 1")
 
     if errors:
         raise SystemExit("Configuration error(s):\n- " + "\n- ".join(errors))

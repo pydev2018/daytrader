@@ -74,9 +74,21 @@ class OrderManager:
                 f"Order rejected {intent.symbol} {intent.side} {intent.order_type} retcode={code}"
             )
 
-    def close_positions(self, symbol: str, side: str, max_count: int) -> int:
+    def close_positions(
+        self,
+        symbol: str,
+        side: str,
+        max_count: int,
+        max_loss_budget: float | None = None,
+    ) -> tuple[int, float]:
         positions = self.broker.our_positions(symbol)
+        positions = sorted(
+            positions,
+            key=lambda p: abs(min(float(p.get("profit", 0.0)), 0.0)),
+        )
         closed = 0
+        est_realized = 0.0
+        remaining_budget = max_loss_budget
         for pos in positions:
             if closed >= max_count:
                 break
@@ -84,6 +96,10 @@ class OrderManager:
             if side == "BUY" and not pos_is_buy:
                 continue
             if side == "SELL" and pos_is_buy:
+                continue
+
+            est_pnl = float(pos.get("profit", 0.0))
+            if remaining_budget is not None and est_pnl < 0 and abs(est_pnl) > remaining_budget:
                 continue
 
             close_side = "SELL" if pos_is_buy else "BUY"
@@ -98,4 +114,47 @@ class OrderManager:
             )
             self.place_intent(intent)
             closed += 1
-        return closed
+            est_realized += est_pnl
+            if remaining_budget is not None and est_pnl < 0:
+                remaining_budget = max(0.0, remaining_budget - abs(est_pnl))
+        return closed, est_realized
+
+    def unwind_positions(
+        self,
+        symbol: str,
+        max_count: int,
+        max_loss_budget: float | None = None,
+    ) -> tuple[int, float]:
+        positions = self.broker.our_positions(symbol)
+        if not positions:
+            return 0, 0.0
+
+        ranked = sorted(positions, key=lambda p: float(p.get("profit", 0.0)))
+        closed = 0
+        est_realized = 0.0
+        remaining_budget = max_loss_budget
+        for pos in ranked:
+            if closed >= max_count:
+                break
+
+            est_pnl = float(pos.get("profit", 0.0))
+            if remaining_budget is not None and est_pnl < 0 and abs(est_pnl) > remaining_budget:
+                continue
+
+            pos_is_buy = int(pos.get("type", 0)) == mt5.POSITION_TYPE_BUY
+            close_side = "SELL" if pos_is_buy else "BUY"
+            intent = OrderIntent(
+                symbol=symbol,
+                side=close_side,
+                order_type="MARKET",
+                volume=float(pos.get("volume", 0.0)),
+                price=0.0,
+                comment="phased_grid_risk_off_unwind",
+                position_ticket=int(pos.get("ticket", 0)),
+            )
+            self.place_intent(intent)
+            closed += 1
+            est_realized += est_pnl
+            if remaining_budget is not None and est_pnl < 0:
+                remaining_budget = max(0.0, remaining_budget - abs(est_pnl))
+        return closed, est_realized

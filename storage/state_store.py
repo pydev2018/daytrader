@@ -24,6 +24,8 @@ def load_state(path: Path) -> dict[str, SymbolRuntime]:
             chop_pnl=float(data.get("chop_pnl", 0.0)),
             buffer_pnl=float(data.get("buffer_pnl", 0.0)),
             last_mid=float(data.get("last_mid", 0.0)),
+            anchor_initialized=bool(data.get("anchor_initialized", False)),
+            trend_persist_bars=int(data.get("trend_persist_bars", 0)),
             metadata=dict(data.get("metadata", {})),
         )
     return out

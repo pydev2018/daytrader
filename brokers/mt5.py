@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from datetime import datetime
 from typing import Optional
 
 import MetaTrader5 as mt5
@@ -19,6 +20,16 @@ TF_MAP = {
     "H1": mt5.TIMEFRAME_H1,
     "H4": mt5.TIMEFRAME_H4,
     "D1": mt5.TIMEFRAME_D1,
+}
+
+TF_MINUTES = {
+    "M1": 1,
+    "M5": 5,
+    "M15": 15,
+    "M30": 30,
+    "H1": 60,
+    "H4": 240,
+    "D1": 1440,
 }
 
 
@@ -77,6 +88,32 @@ class MT5Broker:
             return bool(mt5.symbol_select(symbol, True))
         return True
 
+    def list_symbols(self) -> list[str]:
+        self.ensure_connected()
+        data = mt5.symbols_get() or []
+        return [s.name for s in data]
+
+    def resolve_symbol(self, requested: str) -> str | None:
+        names = self.list_symbols()
+        if requested in names:
+            return requested
+
+        req = requested.upper()
+        exact_casefold = [name for name in names if name.upper() == req]
+        if exact_casefold:
+            return exact_casefold[0]
+
+        fuzzy = [
+            name
+            for name in names
+            if name.upper().startswith(req)
+            or name.upper().endswith(req)
+            or req in name.upper()
+        ]
+        if fuzzy:
+            return fuzzy[0]
+        return None
+
     def symbol_info(self, symbol: str) -> Optional[dict]:
         self.ensure_connected()
         info = mt5.symbol_info(symbol)
@@ -97,6 +134,46 @@ class MT5Broker:
         df["time"] = pd.to_datetime(df["time"], unit="s", utc=True)
         return df
 
+    def get_rates_range(
+        self,
+        symbol: str,
+        timeframe: str,
+        start: datetime,
+        end: datetime,
+    ) -> Optional[pd.DataFrame]:
+        self.ensure_connected()
+        tf = TF_MAP.get(timeframe, mt5.TIMEFRAME_M5)
+
+        # Attempt 1: timezone-aware datetimes
+        rates = mt5.copy_rates_range(symbol, tf, start, end)
+
+        # Attempt 2: naive datetimes (some MT5 builds reject tz-aware values)
+        if rates is None:
+            rates = mt5.copy_rates_range(
+                symbol,
+                tf,
+                start.replace(tzinfo=None),
+                end.replace(tzinfo=None),
+            )
+
+        # Attempt 3: copy from end with bar count and filter window
+        if rates is None:
+            tf_key = timeframe.upper()
+            minutes = TF_MINUTES.get(tf_key, 5)
+            span_minutes = max(1, int((end - start).total_seconds() / 60))
+            bars_needed = max(100, int(span_minutes / minutes) + 500)
+            rates = mt5.copy_rates_from(symbol, tf, end.replace(tzinfo=None), bars_needed)
+
+        if rates is None or len(rates) == 0:
+            return None
+
+        df = pd.DataFrame(rates)
+        df["time"] = pd.to_datetime(df["time"], unit="s", utc=True)
+        df = df[(df["time"] >= pd.Timestamp(start)) & (df["time"] <= pd.Timestamp(end))]
+        if df.empty:
+            return None
+        return df
+
     def our_positions(self, symbol: str | None = None) -> list[dict]:
         self.ensure_connected()
         data = mt5.positions_get(symbol=symbol) if symbol else mt5.positions_get()
@@ -110,6 +187,13 @@ class MT5Broker:
         if data is None:
             return []
         return [o._asdict() for o in data if o.magic == cfg.MAGIC_NUMBER]
+
+    def history_deals(self, start: datetime, end: datetime) -> list[dict]:
+        self.ensure_connected()
+        deals = mt5.history_deals_get(start, end)
+        if deals is None:
+            return []
+        return [d._asdict() for d in deals if int(getattr(d, "magic", 0)) == cfg.MAGIC_NUMBER]
 
     def send_order(self, request: dict) -> Optional[dict]:
         self.ensure_connected()
