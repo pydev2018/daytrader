@@ -56,6 +56,11 @@ CLEANUP_CLOSE_COUNT: int = int(os.getenv("CLEANUP_CLOSE_COUNT", "2"))
 RISK_OFF_UNWIND_PER_CYCLE: int = int(os.getenv("RISK_OFF_UNWIND_PER_CYCLE", "2"))
 PROTECT_OSCILLATION_BANK: bool = os.getenv("PROTECT_OSCILLATION_BANK", "true").lower() in ("true", "1", "yes")
 
+# LLM Oracle Settings
+USE_LLM_ORACLE: bool = os.getenv("USE_LLM_ORACLE", "true").lower() in ("true", "1", "yes")
+LLM_MODEL: str = os.getenv("LLM_MODEL", "gpt-5.2")
+LLM_EVAL_INTERVAL_BARS: int = int(os.getenv("LLM_EVAL_INTERVAL_BARS", "12"))
+
 STATE_PATH = STATE_DIR / "phased_grid_state.json"
 
 

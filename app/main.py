@@ -2,8 +2,13 @@ from __future__ import annotations
 
 import argparse
 import math
+import os
+import sys
 import time
 from datetime import datetime, timezone
+
+# Add the project root to the Python path so we can run this script directly
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from brokers.mt5 import MT5Broker
 from config import settings as cfg
@@ -11,7 +16,16 @@ from execution.models import OrderIntent
 from execution.order_manager import OrderManager
 from risk.guards import RiskConfig, RiskSnapshot, should_risk_off
 from storage.state_store import load_state, save_state
-from strategy.indicators import adx, atr_pips, trend_direction
+from strategy.indicators import (
+    adx,
+    atr_pips,
+    trend_direction,
+    kaufman_er,
+    linear_regression_r2,
+    donchian_channel,
+    is_volatility_squeeze,
+)
+from strategy.llm_oracle import LLMOracle
 from strategy.planner import build_grid_plan
 from strategy.state_machine import TransitionInput, transition_phase
 from strategy.types import Phase, SymbolRuntime, TrendDirection
@@ -23,6 +37,7 @@ class PhasedGridEngine:
         self.broker = MT5Broker()
         self.order_mgr = OrderManager(self.broker)
         self.states = load_state(cfg.STATE_PATH)
+        self.oracle = LLMOracle(model=cfg.LLM_MODEL) if cfg.USE_LLM_ORACLE else None
 
     def _runtime(self, symbol: str) -> SymbolRuntime:
         if symbol not in self.states:
@@ -160,7 +175,7 @@ class PhasedGridEngine:
         )
 
         intents: list[OrderIntent] = []
-        for entry in plan.long_entries:
+        for entry in plan.long_limits:
             intents.append(
                 OrderIntent(
                     symbol=symbol,
@@ -169,10 +184,22 @@ class PhasedGridEngine:
                     volume=lot_size,
                     price=entry,
                     tp=entry + plan.step_price,
-                    comment="phased_grid_long",
+                    comment="phased_grid_long_limit",
                 )
             )
-        for entry in plan.short_entries:
+        for entry in plan.long_stops:
+            intents.append(
+                OrderIntent(
+                    symbol=symbol,
+                    side="BUY",
+                    order_type="STOP",
+                    volume=lot_size,
+                    price=entry,
+                    tp=entry + plan.step_price,
+                    comment="phased_grid_long_stop",
+                )
+            )
+        for entry in plan.short_limits:
             intents.append(
                 OrderIntent(
                     symbol=symbol,
@@ -181,7 +208,19 @@ class PhasedGridEngine:
                     volume=lot_size,
                     price=entry,
                     tp=entry - plan.step_price,
-                    comment="phased_grid_short",
+                    comment="phased_grid_short_limit",
+                )
+            )
+        for entry in plan.short_stops:
+            intents.append(
+                OrderIntent(
+                    symbol=symbol,
+                    side="SELL",
+                    order_type="STOP",
+                    volume=lot_size,
+                    price=entry,
+                    tp=entry - plan.step_price,
+                    comment="phased_grid_short_stop",
                 )
             )
         return intents
@@ -259,7 +298,7 @@ class PhasedGridEngine:
                 cleanup_done = buy_count == 0 or sell_count == 0
 
                 prev_phase = state.phase
-                state.phase = transition_phase(
+                proposed_phase = transition_phase(
                     state.phase,
                     TransitionInput(
                         trend_on=trend_on,
@@ -270,6 +309,42 @@ class PhasedGridEngine:
                     ),
                 )
 
+                # LLM Oracle Override Logic
+                if cfg.USE_LLM_ORACLE and self.oracle:
+                    state.bars_since_llm_eval += 1
+                    if proposed_phase != state.phase or state.bars_since_llm_eval >= cfg.LLM_EVAL_INTERVAL_BARS:
+                        if len(rates) >= 20:
+                            window = rates.tail(20).copy()
+                            
+                            # Calculate advanced quantitative indicators
+                            er_val = kaufman_er(window, period=10)
+                            r2_val = linear_regression_r2(window, period=14)
+                            d_high, d_low = donchian_channel(window, period=20)
+                            squeeze_active = is_volatility_squeeze(window, period=20)
+
+                            # Calculate unrealized PnL
+                            unrealized_pnl = sum(float(p.get("profit", 0.0)) for p in positions)
+
+                            llm_phase = self.oracle.evaluate_regime(
+                                symbol=symbol,
+                                window=window,
+                                current_phase=state.phase,
+                                open_positions=len(positions),
+                                unrealized_pnl=unrealized_pnl,
+                                realized_chop=state.chop_pnl,
+                                realized_trend=state.buffer_pnl,
+                                atr_pips=atr_value_pips,
+                                kaufman_er=er_val,
+                                linreg_r2=r2_val,
+                                donchian_high=d_high,
+                                donchian_low=d_low,
+                                is_squeeze=squeeze_active,
+                            )
+                            if llm_phase:
+                                proposed_phase = llm_phase
+                            state.bars_since_llm_eval = 0
+
+                state.phase = proposed_phase
                 state.trend = trend
                 state.step_ticks = step_ticks
                 self._ingest_realized_pnl(symbol, state, state.phase)

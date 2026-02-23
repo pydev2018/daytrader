@@ -48,6 +48,6 @@ class BacktestConfig:
     progress_every_steps: int = 2000
 
     # LLM Oracle Settings
-    use_llm_oracle: bool = False
+    use_llm_oracle: bool = True
     llm_model: str = "gpt-5.2"
     llm_eval_interval_bars: int = 12  # Evaluate every 1 hour (if 5m bars)

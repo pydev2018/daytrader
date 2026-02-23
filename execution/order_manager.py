@@ -16,10 +16,46 @@ class OrderManager:
 
     def sync_pending(self, symbol: str, intents: list[OrderIntent], max_pending: int) -> None:
         existing = self.broker.our_pending_orders(symbol)
-        for order in existing:
-            self.broker.cancel_order(int(order["ticket"]))
+        active_intents = intents[:max_pending]
 
-        for intent in intents[:max_pending]:
+        def get_mt5_type(intent: OrderIntent) -> int:
+            if intent.order_type == "LIMIT":
+                return mt5.ORDER_TYPE_BUY_LIMIT if intent.side == "BUY" else mt5.ORDER_TYPE_SELL_LIMIT
+            elif intent.order_type == "STOP":
+                return mt5.ORDER_TYPE_BUY_STOP if intent.side == "BUY" else mt5.ORDER_TYPE_SELL_STOP
+            return -1
+
+        unmatched_intents = list(active_intents)
+        orders_to_cancel = []
+
+        for order in existing:
+            order_type = int(order.get("type", -1))
+            order_price = float(order.get("price_open", 0.0))
+            order_vol = float(order.get("volume_initial", 0.0))
+            
+            matched_idx = -1
+            for i, intent in enumerate(unmatched_intents):
+                intent_type = get_mt5_type(intent)
+                # Use a small epsilon for float comparison
+                if (intent_type == order_type and 
+                    abs(intent.price - order_price) < 1e-5 and 
+                    abs(intent.volume - order_vol) < 1e-5):
+                    matched_idx = i
+                    break
+            
+            if matched_idx >= 0:
+                # Match found! Keep this order, remove intent from unmatched
+                unmatched_intents.pop(matched_idx)
+            else:
+                # No matching intent found, this order needs to be cancelled
+                orders_to_cancel.append(int(order["ticket"]))
+
+        # Cancel unmatched existing orders
+        for ticket in orders_to_cancel:
+            self.broker.cancel_order(ticket)
+
+        # Place remaining unmatched intents
+        for intent in unmatched_intents:
             self.place_intent(intent)
 
     def place_intent(self, intent: OrderIntent) -> None:
@@ -32,6 +68,21 @@ class OrderManager:
 
         if intent.order_type == "LIMIT":
             order_type = mt5.ORDER_TYPE_BUY_LIMIT if intent.side == "BUY" else mt5.ORDER_TYPE_SELL_LIMIT
+            req = {
+                "action": mt5.TRADE_ACTION_PENDING,
+                "symbol": intent.symbol,
+                "type": order_type,
+                "volume": volume,
+                "price": price,
+                "tp": tp,
+                "deviation": 10,
+                "magic": cfg.MAGIC_NUMBER,
+                "type_time": mt5.ORDER_TIME_GTC,
+                "type_filling": mt5.ORDER_FILLING_RETURN,
+                "comment": intent.comment or "phased_grid",
+            }
+        elif intent.order_type == "STOP":
+            order_type = mt5.ORDER_TYPE_BUY_STOP if intent.side == "BUY" else mt5.ORDER_TYPE_SELL_STOP
             req = {
                 "action": mt5.TRADE_ACTION_PENDING,
                 "symbol": intent.symbol,
